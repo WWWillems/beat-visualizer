@@ -5,6 +5,9 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Project** — the persistable document: tracks, assets, beat grid, duration,
   fps, aspect ratio. Plain JSON, versioned (`SCHEMA_VERSION`). Defined in
   `src/model/types.ts`.
+- **New project** — starts a fresh Project document from default tracks and
+  clears project media, derived analysis, playhead, selection, and undo
+  history. App settings are preserved because they are cross-project.
 - **Song name** — project-level metadata naming the current song. Separate
   from the Project name, which labels the editor/project document.
 - **App settings** — local-first settings that persist across projects, such

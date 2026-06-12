@@ -118,3 +118,25 @@ test("settings save app settings and current project song name", async ({ page }
   await expect(page.getByLabel("Custom message")).toHaveValue("Visuals generated live.");
   await expect(page.getByLabel("Current song name")).toHaveValue("Loaded Ritual");
 });
+
+test("file new project resets project state but preserves app settings", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Artist name").fill("Light Sculptor");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await page.locator(AUDIO_FILE_INPUT).first().setInputFiles(FIXTURE);
+  await expect(page.locator("#bpm")).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "New" }).click();
+
+  await expect(page.locator("#bpm")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await expect(page.getByText("Select a clip to edit its settings.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByLabel("Artist name")).toHaveValue("Light Sculptor");
+  await expect(page.getByLabel("Current song name")).toHaveValue("");
+});

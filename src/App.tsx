@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ExportDialog } from "@/components/ExportDialog";
+import { FileMenu } from "@/components/FileMenu";
 import { ImportDropZone } from "@/components/ImportDropZone";
 import { ImportMenu } from "@/components/ImportMenu";
 import { Inspector } from "@/components/Inspector";
@@ -33,6 +34,7 @@ export default function App() {
         <h1 className="text-sm font-bold uppercase tracking-widest">Beat Visualizer</h1>
         <span className="text-xs text-muted-foreground">{name}</span>
         <div className="flex-1" />
+        <FileMenu onNewProject={() => setView("editor")} />
         <ImportMenu />
         <Button
           variant="outline"

@@ -26,6 +26,7 @@ interface EditorState {
   setAnalysisPending: (pending: boolean) => void;
   selectClip: (trackId: string | null, clipId: string | null) => void;
   setImportError: (message: string | null) => void;
+  resetForNewProject: () => void;
 }
 
 export const useEditorStore = create<EditorState>()((set) => ({
@@ -45,4 +46,15 @@ export const useEditorStore = create<EditorState>()((set) => ({
   setAnalysisPending: (pending) => set({ analysisPending: pending }),
   selectClip: (trackId, clipId) => set({ selectedTrackId: trackId, selectedClipId: clipId }),
   setImportError: (message) => set({ importError: message }),
+  resetForNewProject: () =>
+    set({
+      playhead: 0,
+      isPlaying: false,
+      audioBuffer: null,
+      analysis: null,
+      analysisPending: false,
+      selectedClipId: null,
+      selectedTrackId: null,
+      importError: null,
+    }),
 }));

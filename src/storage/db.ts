@@ -57,6 +57,15 @@ export async function loadCurrentProjectDoc(): Promise<unknown | null> {
   return (await db.get("projects", currentId)) ?? null;
 }
 
+export async function clearStoredProjectsAndAssets(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(["projects", "assets", "meta"], "readwrite");
+  await tx.objectStore("projects").clear();
+  await tx.objectStore("assets").clear();
+  await tx.objectStore("meta").delete("currentProjectId");
+  await tx.done;
+}
+
 export async function saveAssetBlob(assetId: string, blob: Blob): Promise<void> {
   const db = await getDb();
   await db.put("assets", blob, assetId);
