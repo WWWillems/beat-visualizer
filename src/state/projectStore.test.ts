@@ -84,6 +84,47 @@ describe("projectStore", () => {
     expect(track?.clips[0].duration).toBeCloseTo(1 / 30);
   });
 
+  it("commits an overwrite edit that slices same-track siblings", () => {
+    const trackId = visualTrackId();
+    const store = useProjectStore.getState();
+    const long = createVisualClip(0, 12, {});
+    const moved = createVisualClip(20, 4, {});
+    store.addClip(trackId, long);
+    store.addClip(trackId, moved);
+
+    store.commitClipEdit(trackId, moved.id, 4, 4, true);
+
+    const track = useProjectStore.getState().project.tracks.find((t) => t.id === trackId);
+    expect(track?.clips).toHaveLength(3);
+    expect(track?.clips.find((c) => c.id === long.id)?.duration).toBe(4);
+    expect(track?.clips.find((c) => c.id === moved.id)?.start).toBe(4);
+    const remainder = track?.clips.find((c) => c.id !== long.id && c.id !== moved.id);
+    expect(remainder?.start).toBe(8);
+    expect(remainder?.duration).toBe(4);
+
+    // The whole overwrite is one undo step.
+    undo();
+    const reverted = useProjectStore.getState().project.tracks.find((t) => t.id === trackId);
+    expect(reverted?.clips).toHaveLength(2);
+    expect(reverted?.clips.find((c) => c.id === long.id)?.duration).toBe(12);
+  });
+
+  it("commits a plain edit without slicing when overwrite is off", () => {
+    const trackId = visualTrackId();
+    const store = useProjectStore.getState();
+    const a = createVisualClip(0, 6, {});
+    const b = createVisualClip(8, 4, {});
+    store.addClip(trackId, a);
+    store.addClip(trackId, b);
+
+    store.commitClipEdit(trackId, b.id, 5, 4, false);
+
+    const track = useProjectStore.getState().project.tracks.find((t) => t.id === trackId);
+    expect(track?.clips).toHaveLength(2);
+    expect(track?.clips.find((c) => c.id === a.id)?.duration).toBe(6);
+    expect(track?.clips.find((c) => c.id === b.id)?.start).toBe(5);
+  });
+
   it("clears undo history when loading a project", () => {
     const trackId = visualTrackId();
     useProjectStore.getState().addClip(trackId, createVisualClip(0, 5, {}));

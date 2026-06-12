@@ -17,6 +17,17 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Clip** — a time-bounded item on a track (`start`, `duration`, seconds).
   Audio clips reference an asset; visual clips carry a preset + params +
   keyframes + modulations + seed; image clips carry fit/opacity/layout.
+- **Overwrite editing** — same-track edit mode where a moved or resized clip
+  keeps its requested time range and cuts away overlapped portions of other
+  clips. Fully covered clips are deleted; clips overlapped in the middle are
+  split into left and right remainder clips. Split remainders are new clip
+  segments that restart at their own starts rather than preserving absolute
+  visual time. Normal drag/resize uses hard collision at same-track clip
+  edges; holding Option/Alt enters overwrite editing and allows slicing.
+  Current overwrite editing applies to visual and image clips; audio trimming
+  and source-offset behavior are deferred. Normal collision never auto-shrinks
+  a clip; if the target gap is too small, the clip clamps at the nearest
+  blocking edge.
 - **Asset** — imported media. Metadata (`MediaAssetRef`) lives in the project
   document; bytes live in IndexedDB and the runtime media cache
   (`src/state/mediaCache.ts`), keyed by asset id.

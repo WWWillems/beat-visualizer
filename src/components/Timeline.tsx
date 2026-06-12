@@ -7,6 +7,7 @@ import type { Clip, Track } from "@/model/types";
 import { useEditorStore } from "@/state/editorStore";
 import { addVisualClipAt, importAudioFile, importImageFile } from "@/state/importActions";
 import { useProjectStore } from "@/state/projectStore";
+import { clampMoveStart, clampResizeDuration, clampResizeStart } from "@/timeline/clips";
 
 const PX_PER_SECOND = 32;
 const TRACK_HEADER_WIDTH = 160;
@@ -135,42 +136,69 @@ function ClipView({
 }) {
   const selectedClipId = useEditorStore((s) => s.selectedClipId);
   const moveClip = useProjectStore((s) => s.moveClip);
-  const setClipTiming = useProjectStore((s) => s.setClipTiming);
+  const commitClipEdit = useProjectStore((s) => s.commitClipEdit);
   const [previewTiming, setPreviewTiming] = useState<{ start: number; duration: number } | null>(null);
   const interaction = useRef<ClipInteraction | null>(null);
+  // Tracks Option/Alt during the drag; the value at release decides
+  // collision vs overwrite (see "Overwrite editing" in CONTEXT.md).
+  const overwriteHeld = useRef(false);
+  // Last pointer position, so toggling Alt mid-gesture can recompute the
+  // preview without waiting for the next pointer move.
+  const lastClientX = useRef(0);
 
   const minDuration = 1 / fps;
   const canResize = clip.type === "visual" || clip.type === "image";
+  const collides = clip.type === "visual" || clip.type === "image";
   const displayStart = previewTiming?.start ?? clip.start;
   const displayDuration = previewTiming?.duration ?? clip.duration;
   const left = secondsToPx(displayStart);
   const width = secondsToPx(displayDuration);
   const selected = selectedClipId === clip.id;
 
-  const calculateTiming = (state: ClipInteraction, deltaSeconds: number) => {
+  const calculateTiming = (state: ClipInteraction, deltaSeconds: number, overwrite: boolean) => {
+    const siblings = track.clips.filter((c) => c.id !== clip.id);
+    const useCollision = collides && !overwrite;
     switch (state.kind) {
       case "move": {
+        const desired = state.originStart + deltaSeconds;
+        if (useCollision) {
+          return {
+            start: clampMoveStart(siblings, clip.duration, desired, state.originStart, projectDuration),
+            duration: clip.duration,
+          };
+        }
         const maxStart = Math.max(0, projectDuration - clip.duration);
         return {
-          start: Math.min(maxStart, Math.max(0, state.originStart + deltaSeconds)),
+          start: Math.min(maxStart, Math.max(0, desired)),
           duration: clip.duration,
         };
       }
       case "resize-left": {
+        const desired = state.originStart + deltaSeconds;
+        if (useCollision) {
+          return clampResizeStart(siblings, state.originStart, state.originDuration, desired, minDuration);
+        }
         const end = state.originStart + state.originDuration;
-        const start = Math.min(
-          end - minDuration,
-          Math.max(0, state.originStart + deltaSeconds),
-        );
+        const start = Math.min(end - minDuration, Math.max(0, desired));
         return { start, duration: end - start };
       }
       case "resize-right": {
+        const desired = state.originDuration + deltaSeconds;
+        if (useCollision) {
+          return clampResizeDuration(
+            siblings,
+            state.originStart,
+            state.originDuration,
+            desired,
+            minDuration,
+            projectDuration,
+          );
+        }
         const maxDuration = Math.max(minDuration, projectDuration - state.originStart);
-        const duration = Math.min(
-          maxDuration,
-          Math.max(minDuration, state.originDuration + deltaSeconds),
-        );
-        return { start: state.originStart, duration };
+        return {
+          start: state.originStart,
+          duration: Math.min(maxDuration, Math.max(minDuration, desired)),
+        };
       }
       default: {
         const exhaustive: never = state;
@@ -178,6 +206,32 @@ function ClipView({
       }
     }
   };
+
+  // While a gesture is active, toggling Option/Alt re-renders the preview
+  // immediately: pressing it shows the free (overwrite) timing, releasing it
+  // snaps back to the collision-clamped timing.
+  const dragging = previewTiming !== null;
+  useEffect(() => {
+    if (!dragging) return;
+    const onAltToggle = (event: KeyboardEvent) => {
+      if (event.key !== "Alt" || event.repeat) return;
+      const state = interaction.current;
+      if (!state) return;
+      event.preventDefault();
+      const overwrite = event.type === "keydown";
+      overwriteHeld.current = overwrite;
+      setPreviewTiming(
+        calculateTiming(state, pxToSeconds(lastClientX.current - state.originX), overwrite),
+      );
+    };
+    window.addEventListener("keydown", onAltToggle);
+    window.addEventListener("keyup", onAltToggle);
+    return () => {
+      window.removeEventListener("keydown", onAltToggle);
+      window.removeEventListener("keyup", onAltToggle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gesture inputs are stable while dragging
+  }, [dragging]);
 
   return (
     <div
@@ -190,6 +244,8 @@ function ClipView({
       onPointerDown={(event) => {
         event.stopPropagation();
         useEditorStore.getState().selectClip(track.id, clip.id);
+        overwriteHeld.current = event.altKey;
+        lastClientX.current = event.clientX;
         interaction.current = {
           kind: "move",
           pointerId: event.pointerId,
@@ -201,20 +257,26 @@ function ClipView({
       onPointerMove={(event) => {
         const state = interaction.current;
         if (!state || state.pointerId !== event.pointerId) return;
-        setPreviewTiming(calculateTiming(state, pxToSeconds(event.clientX - state.originX)));
+        overwriteHeld.current = event.altKey;
+        lastClientX.current = event.clientX;
+        setPreviewTiming(
+          calculateTiming(state, pxToSeconds(event.clientX - state.originX), event.altKey),
+        );
       }}
       onPointerUp={(event) => {
         const state = interaction.current;
         interaction.current = null;
         setPreviewTiming(null);
         if (state && Math.abs(event.clientX - state.originX) > 2) {
-          const next = calculateTiming(state, pxToSeconds(event.clientX - state.originX));
-          if (state.kind === "move") {
+          const overwrite = overwriteHeld.current && collides;
+          const next = calculateTiming(state, pxToSeconds(event.clientX - state.originX), overwrite);
+          if (collides) {
+            commitClipEdit(track.id, clip.id, next.start, next.duration, overwrite);
+          } else if (state.kind === "move") {
             moveClip(track.id, clip.id, next.start);
-          } else {
-            setClipTiming(track.id, clip.id, next.start, next.duration);
           }
         }
+        overwriteHeld.current = false;
       }}
     >
       {canResize && (
@@ -224,6 +286,8 @@ function ClipView({
           onPointerDown={(event) => {
             event.stopPropagation();
             useEditorStore.getState().selectClip(track.id, clip.id);
+            overwriteHeld.current = event.altKey;
+            lastClientX.current = event.clientX;
             interaction.current = {
               kind: "resize-left",
               pointerId: event.pointerId,
@@ -246,6 +310,8 @@ function ClipView({
           onPointerDown={(event) => {
             event.stopPropagation();
             useEditorStore.getState().selectClip(track.id, clip.id);
+            overwriteHeld.current = event.altKey;
+            lastClientX.current = event.clientX;
             interaction.current = {
               kind: "resize-right",
               pointerId: event.pointerId,

@@ -1,3 +1,4 @@
+import { current } from "immer";
 import { temporal } from "zundo";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
@@ -10,6 +11,7 @@ import type {
   Project,
   Track,
 } from "@/model/types";
+import { applyOverwriteEdit } from "@/timeline/clips";
 
 interface ProjectState {
   project: Project;
@@ -25,6 +27,18 @@ interface ProjectState {
   addClip: (trackId: string, clip: Clip) => void;
   moveClip: (trackId: string, clipId: string, start: number) => void;
   setClipTiming: (trackId: string, clipId: string, start: number, duration: number) => void;
+  /**
+   * Commits a drag/resize. With `overwrite` on a visual/image track, the
+   * edited clip keeps its range and overlapped siblings are trimmed, split,
+   * or deleted (see "Overwrite editing" in CONTEXT.md).
+   */
+  commitClipEdit: (
+    trackId: string,
+    clipId: string,
+    start: number,
+    duration: number,
+    overwrite: boolean,
+  ) => void;
   deleteClip: (trackId: string, clipId: string) => void;
 }
 
@@ -107,6 +121,32 @@ export const useProjectStore = create<ProjectState>()(
           if (!clip) return;
           clip.start = Math.max(0, start);
           clip.duration = Math.max(1 / state.project.fps, duration);
+          state.project.modifiedAt = Date.now();
+        }),
+
+      commitClipEdit: (trackId, clipId, start, duration, overwrite) =>
+        set((state) => {
+          const track = findTrack(state.project as Project, trackId);
+          const clip = track?.clips.find((c: Clip) => c.id === clipId);
+          if (!track || !clip) return;
+          const minDuration = 1 / state.project.fps;
+          const clampedStart = Math.max(0, start);
+          const clampedDuration = Math.max(minDuration, duration);
+
+          if (overwrite && (track.type === "visual" || track.type === "image")) {
+            // Unwrap drafts so overwrite slicing works on plain clip data.
+            const clips = current(track).clips as Clip[];
+            (track.clips as Clip[]) = applyOverwriteEdit(
+              clips,
+              clipId,
+              clampedStart,
+              clampedDuration,
+              minDuration,
+            );
+          } else {
+            clip.start = clampedStart;
+            clip.duration = clampedDuration;
+          }
           state.project.modifiedAt = Date.now();
         }),
 
