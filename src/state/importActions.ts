@@ -7,6 +7,7 @@ import { useEditorStore } from "@/state/editorStore";
 import { putBlob, putImageBitmap } from "@/state/mediaCache";
 import { useProjectStore } from "@/state/projectStore";
 import { saveAssetBlob } from "@/storage/db";
+import { fitClipsToDuration } from "@/timeline/clips";
 
 export const MAX_IMAGE_FILE_BYTES = 25 * 1024 * 1024;
 
@@ -51,7 +52,10 @@ export async function importAudioFile(file: File): Promise<void> {
         duration: buffer.duration,
       });
       project.primaryAudioAssetId = assetId;
-      project.duration = Math.ceil(buffer.duration);
+      // Timeline duration matches the audio exactly; it caps playback,
+      // clip drag/resize bounds, and export length.
+      project.duration = buffer.duration;
+      fitClipsToDuration(project.tracks, buffer.duration, 1 / project.fps);
       project.beatGrid = { bpm: analysis.bpm, offset: analysis.beatOffset };
       const track = firstTrackOfType(project, "audio");
       if (track && track.type === "audio") {

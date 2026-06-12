@@ -93,6 +93,27 @@ export function clampResizeDuration(
 }
 
 /**
+ * Trims every clip in the project to fit a new timeline duration: ends are
+ * cut at the boundary and clips starting beyond it are pulled back to the
+ * last full frame. Used when the duration shrinks (e.g. syncing a legacy
+ * rounded-up duration to the exact audio length).
+ */
+export function fitClipsToDuration(
+  tracks: { clips: ClipSpan[] }[],
+  duration: number,
+  minDuration: number,
+): void {
+  for (const track of tracks) {
+    for (const clip of track.clips) {
+      if (clip.start >= duration - minDuration) {
+        clip.start = Math.max(0, duration - minDuration);
+      }
+      clip.duration = Math.max(minDuration, Math.min(clip.duration, duration - clip.start));
+    }
+  }
+}
+
+/**
  * Applies an overwrite edit: the edited clip takes its requested range and
  * overlapped siblings are trimmed, split into left/right remainders, or
  * deleted when fully covered. The right remainder of a split is a new clip

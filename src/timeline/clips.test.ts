@@ -6,6 +6,7 @@ import {
   clampMoveStart,
   clampResizeDuration,
   clampResizeStart,
+  fitClipsToDuration,
 } from "@/timeline/clips";
 
 const MIN = 1 / 30;
@@ -58,6 +59,29 @@ describe("clampResize (hard collision)", () => {
   it("respects the project duration when there is no next sibling", () => {
     const result = clampResizeDuration([], 5, 3, 100, MIN, 30);
     expect(result.duration).toBe(25);
+  });
+});
+
+describe("fitClipsToDuration", () => {
+  it("trims clips that extend past the new duration", () => {
+    const clip = visual(30, 7); // ends at 37
+    fitClipsToDuration([{ clips: [clip] }], 36.4, MIN);
+    expect(clip.start).toBe(30);
+    expect(clip.duration).toBeCloseTo(6.4);
+  });
+
+  it("pulls back clips that start beyond the new duration", () => {
+    const clip = visual(40, 2);
+    fitClipsToDuration([{ clips: [clip] }], 36.4, MIN);
+    expect(clip.start).toBeCloseTo(36.4 - MIN);
+    expect(clip.duration).toBeCloseTo(MIN);
+  });
+
+  it("leaves clips that already fit untouched", () => {
+    const clip = visual(0, 10);
+    fitClipsToDuration([{ clips: [clip] }], 36.4, MIN);
+    expect(clip.start).toBe(0);
+    expect(clip.duration).toBe(10);
   });
 });
 

@@ -110,7 +110,8 @@ export const useProjectStore = create<ProjectState>()(
           const track = findTrack(state.project as Project, trackId);
           const clip = track?.clips.find((c: Clip) => c.id === clipId);
           if (!clip) return;
-          clip.start = Math.max(0, start);
+          const maxStart = Math.max(0, state.project.duration - clip.duration);
+          clip.start = Math.min(maxStart, Math.max(0, start));
           state.project.modifiedAt = Date.now();
         }),
 
