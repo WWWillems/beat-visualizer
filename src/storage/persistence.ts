@@ -7,7 +7,6 @@ import { putBlob, putImageBitmap } from "@/state/mediaCache";
 import { useProjectStore } from "@/state/projectStore";
 import { useSettingsStore } from "@/state/settingsStore";
 import { loadAssetBlob, loadCurrentProjectDoc, saveAssetBlob, saveProjectDoc } from "@/storage/db";
-import { fitClipsToDuration } from "@/timeline/clips";
 
 const SAVE_DEBOUNCE_MS = 800;
 
@@ -91,18 +90,6 @@ async function restoreLastProject(): Promise<void> {
         void context.close();
         transport.setBuffer(buffer);
         useEditorStore.getState().setAudio(buffer);
-
-        // Legacy projects stored a rounded-up duration; re-sync to the
-        // exact audio length and trim clips that stick out past it.
-        if (Math.abs(project.duration - buffer.duration) > 1e-6) {
-          useProjectStore.getState().updateProject((draft) => {
-            draft.duration = buffer.duration;
-            fitClipsToDuration(draft.tracks, buffer.duration, 1 / draft.fps);
-          });
-          // The sync is part of loading, not a user edit.
-          useProjectStore.temporal.getState().clear();
-        }
-
         useEditorStore.getState().setAnalysisPending(true);
         const analysis = await analyzeInWorker(buffer);
         useEditorStore.getState().setAnalysis(analysis);
