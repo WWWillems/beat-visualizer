@@ -4,6 +4,7 @@ import { FileMenu } from "@/components/FileMenu";
 import { ImportDropZone } from "@/components/ImportDropZone";
 import { ImportMenu } from "@/components/ImportMenu";
 import { Inspector } from "@/components/Inspector";
+import { ProjectBrowser } from "@/components/ProjectBrowser";
 import { RenderView } from "@/components/RenderView";
 import { SettingsScreen } from "@/components/SettingsScreen";
 import { Timeline } from "@/components/Timeline";
@@ -20,7 +21,7 @@ import type { AspectRatioId } from "@/model/types";
 import { ASPECT_RATIOS } from "@/model/types";
 import { useProjectStore } from "@/state/projectStore";
 
-type AppView = "editor" | "settings";
+type AppView = "editor" | "settings" | "projects";
 
 export default function App() {
   const [view, setView] = useState<AppView>("editor");
@@ -34,7 +35,7 @@ export default function App() {
         <h1 className="text-sm font-bold uppercase tracking-widest">Beat Visualizer</h1>
         <span className="text-xs text-muted-foreground">{name}</span>
         <div className="flex-1" />
-        <FileMenu onNewProject={() => setView("editor")} />
+        <FileMenu onNewProject={() => setView("editor")} onOpenBrowser={() => setView("projects")} />
         <ImportMenu />
         <Button
           variant="outline"
@@ -60,6 +61,8 @@ export default function App() {
 
       {view === "settings" ? (
         <SettingsScreen onDone={() => setView("editor")} />
+      ) : view === "projects" ? (
+        <ProjectBrowser onOpened={() => setView("editor")} />
       ) : (
         <>
           <div className="flex min-h-0 flex-1">

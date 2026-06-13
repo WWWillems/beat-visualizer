@@ -2,6 +2,7 @@ import { analyzeInWorker } from "@/audio/importAudio";
 import { transport } from "@/audio/playback";
 import { migrateProject } from "@/model/schema";
 import type { Project } from "@/model/types";
+import { generateAndStoreThumbnail } from "@/renderer/thumbnail";
 import { useEditorStore } from "@/state/editorStore";
 import { putBlob, putImageBitmap } from "@/state/mediaCache";
 import { useProjectStore } from "@/state/projectStore";
@@ -9,6 +10,7 @@ import { useSettingsStore } from "@/state/settingsStore";
 import { loadAssetBlob, loadCurrentProjectDoc, saveAssetBlob, saveProjectDoc } from "@/storage/db";
 
 const SAVE_DEBOUNCE_MS = 800;
+const THUMBNAIL_DEBOUNCE_MS = 2500;
 
 /**
  * Restores the last open project from IndexedDB, then keeps saving project
@@ -22,6 +24,7 @@ export async function initPersistence(): Promise<void> {
   await restoreLastProject();
 
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let thumbnailTimer: ReturnType<typeof setTimeout> | null = null;
   let dirty = false;
   let lastSaved: Project | null = useProjectStore.getState().project;
 
@@ -38,6 +41,15 @@ export async function initPersistence(): Promise<void> {
     dirty = true;
     if (timer) clearTimeout(timer);
     timer = setTimeout(flush, SAVE_DEBOUNCE_MS);
+
+    // Regenerate the project thumbnail after edits settle.
+    if (thumbnailTimer) clearTimeout(thumbnailTimer);
+    thumbnailTimer = setTimeout(() => {
+      void generateAndStoreThumbnail(
+        useProjectStore.getState().project,
+        useEditorStore.getState().analysis,
+      );
+    }, THUMBNAIL_DEBOUNCE_MS);
   });
 
   // Flush pending saves when the tab is hidden or closing so a quick reload
@@ -56,24 +68,12 @@ async function restoreAppSettings(): Promise<void> {
   }
 }
 
-async function restoreLastProject(): Promise<void> {
-  let raw: unknown | null = null;
-  try {
-    raw = await loadCurrentProjectDoc();
-  } catch {
-    return; // No storage available (e.g. blocked); run in-memory only.
-  }
-  if (!raw) return;
-
-  let project: Project;
-  try {
-    project = migrateProject(raw);
-  } catch {
-    return; // Unreadable/newer project; start fresh rather than corrupting it.
-  }
-
-  useProjectStore.getState().loadProject(project);
-
+/**
+ * Loads a project's media from IndexedDB into the runtime cache, re-decodes
+ * the primary audio, and recomputes analysis. Shared by startup restore and
+ * opening a project from the browser.
+ */
+export async function restoreProjectMedia(project: Project): Promise<void> {
   for (const asset of project.assets) {
     const blob = await loadAssetBlob(asset.id);
     if (!blob) continue;
@@ -98,6 +98,26 @@ async function restoreLastProject(): Promise<void> {
       }
     }
   }
+}
+
+async function restoreLastProject(): Promise<void> {
+  let raw: unknown | null = null;
+  try {
+    raw = await loadCurrentProjectDoc();
+  } catch {
+    return; // No storage available (e.g. blocked); run in-memory only.
+  }
+  if (!raw) return;
+
+  let project: Project;
+  try {
+    project = migrateProject(raw);
+  } catch {
+    return; // Unreadable/newer project; start fresh rather than corrupting it.
+  }
+
+  useProjectStore.getState().loadProject(project);
+  await restoreProjectMedia(project);
 }
 
 export { saveAssetBlob };

@@ -1,4 +1,4 @@
-import { FilePlus2 } from "lucide-react";
+import { FilePlus2, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +11,10 @@ import { startNewProject } from "@/state/projectActions";
 
 interface FileMenuProps {
   onNewProject: () => void;
+  onOpenBrowser: () => void;
 }
 
-export function FileMenu({ onNewProject }: FileMenuProps) {
+export function FileMenu({ onNewProject, onOpenBrowser }: FileMenuProps) {
   const [busy, setBusy] = useState(false);
 
   const newProject = async () => {
@@ -36,6 +37,9 @@ export function FileMenu({ onNewProject }: FileMenuProps) {
       <DropdownMenuContent align="start">
         <DropdownMenuItem onSelect={() => void newProject()}>
           <FilePlus2 /> New
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onOpenBrowser}>
+          <FolderOpen /> Open
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

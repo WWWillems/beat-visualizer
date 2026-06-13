@@ -20,25 +20,53 @@ interface BeatVisualizerDB extends DBSchema {
     key: string;
     value: AppSettings;
   };
+  thumbnails: {
+    key: string;
+    value: Blob;
+  };
 }
 
 const DB_NAME = "beat-visualizer";
-const DB_VERSION = 2;
+const DB_VERSION = 4;
 const APP_SETTINGS_KEY = "current";
+const REQUIRED_STORES = ["projects", "assets", "meta", "appSettings", "thumbnails"] as const;
 
 let dbPromise: Promise<IDBPDatabase<BeatVisualizerDB>> | null = null;
 
-export function getDb(): Promise<IDBPDatabase<BeatVisualizerDB>> {
-  dbPromise ??= openDB<BeatVisualizerDB>(DB_NAME, DB_VERSION, {
+function createMissingStores(db: IDBPDatabase<BeatVisualizerDB>): void {
+  if (!db.objectStoreNames.contains("projects")) db.createObjectStore("projects");
+  if (!db.objectStoreNames.contains("assets")) db.createObjectStore("assets");
+  if (!db.objectStoreNames.contains("meta")) db.createObjectStore("meta");
+  if (!db.objectStoreNames.contains("appSettings")) db.createObjectStore("appSettings");
+  if (!db.objectStoreNames.contains("thumbnails")) db.createObjectStore("thumbnails");
+}
+
+function openBeatVisualizerDb(version: number): Promise<IDBPDatabase<BeatVisualizerDB>> {
+  return openDB<BeatVisualizerDB>(DB_NAME, version, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains("projects")) db.createObjectStore("projects");
-      if (!db.objectStoreNames.contains("assets")) db.createObjectStore("assets");
-      if (!db.objectStoreNames.contains("meta")) db.createObjectStore("meta");
-      if (!db.objectStoreNames.contains("appSettings")) {
-        db.createObjectStore("appSettings");
-      }
+      createMissingStores(db);
     },
   });
+}
+
+function hasRequiredStores(db: IDBPDatabase<BeatVisualizerDB>): boolean {
+  return REQUIRED_STORES.every((store) => db.objectStoreNames.contains(store));
+}
+
+export async function getDb(): Promise<IDBPDatabase<BeatVisualizerDB>> {
+  dbPromise ??= openBeatVisualizerDb(DB_VERSION);
+  const db = await dbPromise;
+
+  // During development/HMR an older open connection can survive after the
+  // schema changes. If that happens, repair by reopening with a higher version
+  // so IndexedDB gets an upgrade transaction and can create the missing store.
+  if (!hasRequiredStores(db)) {
+    const repairVersion = db.version + 1;
+    db.close();
+    dbPromise = openBeatVisualizerDb(repairVersion);
+    return dbPromise;
+  }
+
   return dbPromise;
 }
 
@@ -57,13 +85,37 @@ export async function loadCurrentProjectDoc(): Promise<unknown | null> {
   return (await db.get("projects", currentId)) ?? null;
 }
 
-export async function clearStoredProjectsAndAssets(): Promise<void> {
+export async function loadProjectDoc(projectId: string): Promise<unknown | null> {
   const db = await getDb();
-  const tx = db.transaction(["projects", "assets", "meta"], "readwrite");
-  await tx.objectStore("projects").clear();
-  await tx.objectStore("assets").clear();
-  await tx.objectStore("meta").delete("currentProjectId");
+  return (await db.get("projects", projectId)) ?? null;
+}
+
+export async function listProjectDocs(): Promise<unknown[]> {
+  const db = await getDb();
+  return db.getAll("projects");
+}
+
+/** Removes a project document, its thumbnail, and the media blobs referenced by the project. */
+export async function deleteProjectDoc(projectId: string): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(["projects", "thumbnails", "assets"], "readwrite");
+  const project = await tx.objectStore("projects").get(projectId);
+  await tx.objectStore("projects").delete(projectId);
+  await tx.objectStore("thumbnails").delete(projectId);
+  for (const asset of project?.assets ?? []) {
+    await tx.objectStore("assets").delete(asset.id);
+  }
   await tx.done;
+}
+
+export async function saveThumbnail(projectId: string, blob: Blob): Promise<void> {
+  const db = await getDb();
+  await db.put("thumbnails", blob, projectId);
+}
+
+export async function loadThumbnail(projectId: string): Promise<Blob | null> {
+  const db = await getDb();
+  return (await db.get("thumbnails", projectId)) ?? null;
 }
 
 export async function saveAssetBlob(assetId: string, blob: Blob): Promise<void> {

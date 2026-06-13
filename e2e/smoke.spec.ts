@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,6 +86,19 @@ test("project persists across a reload", async ({ page }) => {
   await expect(page.locator("#bpm")).toBeVisible({ timeout: 30_000 });
 });
 
+test("file open shows the current project even before edits are saved", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Open" }).click();
+
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open project Untitled" })).toBeVisible();
+  await expect(page.getByText("Current")).toBeVisible();
+  await page.getByRole("button", { name: "Editor" }).click();
+  await expect(page.getByText("Select a clip to edit its settings.")).toBeVisible();
+});
+
 test("settings save app settings and current project song name", async ({ page }) => {
   await page.goto("/");
 
@@ -119,11 +134,12 @@ test("settings save app settings and current project song name", async ({ page }
   await expect(page.getByLabel("Current song name")).toHaveValue("Loaded Ritual");
 });
 
-test("file new project resets project state but preserves app settings", async ({ page }) => {
+test("file new project resets current state, preserves app settings, and old projects stay openable", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByLabel("Artist name").fill("Light Sculptor");
+  await page.getByLabel("Current song name").fill("First Project");
   await page.getByRole("button", { name: "Save" }).click();
 
   await page.locator(AUDIO_FILE_INPUT).first().setInputFiles(FIXTURE);
@@ -139,4 +155,91 @@ test("file new project resets project state but preserves app settings", async (
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByLabel("Artist name")).toHaveValue("Light Sculptor");
   await expect(page.getByLabel("Current song name")).toHaveValue("");
+
+  await page.getByRole("button", { name: "Editor" }).click();
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Open" }).click();
+
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(page.getByText("First Project")).toBeVisible();
+  await expect(page.getByText("Current")).toBeVisible();
+
+  await page.getByRole("button", { name: "Open project Untitled" }).filter({ hasText: "First Project" }).click();
+  await expect(page.locator("#bpm")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByLabel("Current song name")).toHaveValue("First Project");
+});
+
+test("project browser confirms and deletes a non-current project without opening it", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Current song name").fill("Delete Me Later");
+  await page.getByRole("button", { name: "Save" }).click();
+  await page.locator(AUDIO_FILE_INPUT).first().setInputFiles(FIXTURE);
+  await expect(page.locator("#bpm")).toBeVisible({ timeout: 30_000 });
+  await page.evaluate(async () => {
+    // Wait for the imported audio blob to be written to IndexedDB.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "New" }).click();
+
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Open" }).click();
+  const oldProject = page.getByTestId("project-card").filter({ hasText: "Delete Me Later" });
+  await expect(oldProject).toBeVisible();
+  await oldProject.getByTestId("delete-project").click();
+
+  const deleteDialog = page.getByRole("dialog");
+  await expect(deleteDialog).toBeVisible();
+  await expect(deleteDialog).toContainText("Delete Me Later");
+  await page.getByRole("button", { name: "Delete" }).click();
+
+  await expect(deleteDialog).toBeHidden();
+  await expect(page.getByText("Delete Me Later")).toHaveCount(0);
+  await expect(page.getByTestId("project-card").filter({ hasText: "Current" })).toBeVisible();
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const request = indexedDB.open("beat-visualizer");
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+        const tx = db.transaction("assets", "readonly");
+        const countRequest = tx.objectStore("assets").count();
+        const count = await new Promise<number>((resolve, reject) => {
+          countRequest.onerror = () => reject(countRequest.error);
+          countRequest.onsuccess = () => resolve(countRequest.result);
+        });
+        db.close();
+        return count;
+      }),
+    )
+    .toBe(0);
+});
+
+test("project browser can delete the current project and stay open", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Current song name").fill("Current Delete");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Open" }).click();
+  const currentProject = page.getByTestId("project-card").filter({ hasText: "Current Delete" });
+  await currentProject.getByTestId("delete-project").click();
+
+  const deleteDialog = page.getByRole("dialog");
+  await expect(deleteDialog).toBeVisible();
+  await page.getByRole("button", { name: "Delete" }).click();
+
+  await expect(deleteDialog).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(page.getByText("Current Delete")).toHaveCount(0);
+  await expect(page.getByTestId("project-card")).toHaveCount(0);
+  await expect(page.getByText("No stored projects yet.")).toBeVisible();
 });
