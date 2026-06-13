@@ -1,5 +1,5 @@
 import { ImagePlus, Music, Plus } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type WheelEvent } from "react";
 import { transport } from "@/audio/playback";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,34 +8,50 @@ import { useEditorStore } from "@/state/editorStore";
 import { addVisualClipAt, importAudioFile, importImageFile } from "@/state/importActions";
 import { useProjectStore } from "@/state/projectStore";
 import { clampMoveStart, clampResizeDuration, clampResizeStart } from "@/timeline/clips";
+import {
+  DEFAULT_TIMELINE_PX_PER_SECOND,
+  adaptiveTimelineTickInterval,
+  clampTimelinePxPerSecond,
+  clampTimelineScrollLeft,
+  zoomTimelineViewport,
+} from "@/timeline/viewport";
 
-const PX_PER_SECOND = 32;
 const TRACK_HEADER_WIDTH = 160;
 const ROW_HEIGHT = 56;
 
-function secondsToPx(seconds: number): number {
-  return seconds * PX_PER_SECOND;
+function secondsToPx(seconds: number, pxPerSecond: number): number {
+  return seconds * pxPerSecond;
 }
 
-function pxToSeconds(px: number): number {
-  return px / PX_PER_SECOND;
+function pxToSeconds(px: number, pxPerSecond: number): number {
+  return px / pxPerSecond;
 }
 
-function PlayheadLine() {
+function formatRulerTime(seconds: number): string {
+  if (seconds < 60) {
+    return Number.isInteger(seconds) ? `${seconds}s` : `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.floor(seconds % 60);
+  return `${minutes}:${remainder.toString().padStart(2, "0")}`;
+}
+
+function PlayheadLine({ pxPerSecond }: { pxPerSecond: number }) {
   const playhead = useEditorStore((s) => s.playhead);
   return (
     <div
       className="pointer-events-none absolute top-0 bottom-0 z-20 w-px bg-foreground"
-      style={{ left: secondsToPx(playhead) }}
+      style={{ left: secondsToPx(playhead, pxPerSecond) }}
     />
   );
 }
 
-function Ruler({ duration }: { duration: number }) {
+function Ruler({ duration, pxPerSecond }: { duration: number; pxPerSecond: number }) {
   const beatGrid = useProjectStore((s) => s.project.beatGrid);
   const seek = useSeek();
   const ticks: number[] = [];
-  for (let t = 0; t <= duration; t += 5) ticks.push(t);
+  const tickInterval = adaptiveTimelineTickInterval(pxPerSecond);
+  for (let t = 0; t <= duration; t += tickInterval) ticks.push(Number(t.toFixed(3)));
 
   const beats: number[] = [];
   if (beatGrid && beatGrid.bpm > 0) {
@@ -46,30 +62,34 @@ function Ruler({ duration }: { duration: number }) {
   return (
     <div
       className="relative h-8 cursor-crosshair border-b bg-card select-none"
-      style={{ width: secondsToPx(duration) }}
+      style={{ width: secondsToPx(duration, pxPerSecond) }}
       onPointerDown={(event) => {
         const rect = event.currentTarget.getBoundingClientRect();
-        seek(pxToSeconds(event.clientX - rect.left));
+        seek(pxToSeconds(event.clientX - rect.left, pxPerSecond));
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={(event) => {
         // Drag-scrub: keep seeking while the pointer is held down.
         if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
         const rect = event.currentTarget.getBoundingClientRect();
-        seek(Math.min(duration, pxToSeconds(event.clientX - rect.left)));
+        seek(Math.min(duration, pxToSeconds(event.clientX - rect.left, pxPerSecond)));
       }}
     >
       {beats.map((t, i) => (
         <div
           key={`b${i}`}
           className="absolute bottom-0 h-1.5 w-px bg-muted-foreground/40"
-          style={{ left: secondsToPx(t) }}
+          style={{ left: secondsToPx(t, pxPerSecond) }}
         />
       ))}
       {ticks.map((t) => (
-        <div key={t} className="absolute top-0 h-full" style={{ left: secondsToPx(t) }}>
+        <div
+          key={t}
+          className="absolute top-0 h-full"
+          style={{ left: secondsToPx(t, pxPerSecond) }}
+        >
           <div className="h-2 w-px bg-border" />
-          <span className="pl-1 text-[10px] text-muted-foreground">{t}s</span>
+          <span className="pl-1 text-[10px] text-muted-foreground">{formatRulerTime(t)}</span>
         </div>
       ))}
     </div>
@@ -128,11 +148,13 @@ function ClipView({
   clip,
   projectDuration,
   fps,
+  pxPerSecond,
 }: {
   track: Track;
   clip: Clip;
   projectDuration: number;
   fps: number;
+  pxPerSecond: number;
 }) {
   const selectedClipId = useEditorStore((s) => s.selectedClipId);
   const moveClip = useProjectStore((s) => s.moveClip);
@@ -151,8 +173,8 @@ function ClipView({
   const collides = clip.type === "visual" || clip.type === "image";
   const displayStart = previewTiming?.start ?? clip.start;
   const displayDuration = previewTiming?.duration ?? clip.duration;
-  const left = secondsToPx(displayStart);
-  const width = secondsToPx(displayDuration);
+  const left = secondsToPx(displayStart, pxPerSecond);
+  const width = secondsToPx(displayDuration, pxPerSecond);
   const selected = selectedClipId === clip.id;
 
   const calculateTiming = (state: ClipInteraction, deltaSeconds: number, overwrite: boolean) => {
@@ -221,7 +243,11 @@ function ClipView({
       const overwrite = event.type === "keydown";
       overwriteHeld.current = overwrite;
       setPreviewTiming(
-        calculateTiming(state, pxToSeconds(lastClientX.current - state.originX), overwrite),
+        calculateTiming(
+          state,
+          pxToSeconds(lastClientX.current - state.originX, pxPerSecond),
+          overwrite,
+        ),
       );
     };
     window.addEventListener("keydown", onAltToggle);
@@ -260,7 +286,11 @@ function ClipView({
         overwriteHeld.current = event.altKey;
         lastClientX.current = event.clientX;
         setPreviewTiming(
-          calculateTiming(state, pxToSeconds(event.clientX - state.originX), event.altKey),
+          calculateTiming(
+            state,
+            pxToSeconds(event.clientX - state.originX, pxPerSecond),
+            event.altKey,
+          ),
         );
       }}
       onPointerUp={(event) => {
@@ -269,7 +299,11 @@ function ClipView({
         setPreviewTiming(null);
         if (state && Math.abs(event.clientX - state.originX) > 2) {
           const overwrite = overwriteHeld.current && collides;
-          const next = calculateTiming(state, pxToSeconds(event.clientX - state.originX), overwrite);
+          const next = calculateTiming(
+            state,
+            pxToSeconds(event.clientX - state.originX, pxPerSecond),
+            overwrite,
+          );
           if (collides) {
             commitClipEdit(track.id, clip.id, next.start, next.duration, overwrite);
           } else if (state.kind === "move") {
@@ -327,15 +361,25 @@ function ClipView({
   );
 }
 
-function TrackRow({ track, duration, fps }: { track: Track; duration: number; fps: number }) {
+function TrackRow({
+  track,
+  duration,
+  fps,
+  pxPerSecond,
+}: {
+  track: Track;
+  duration: number;
+  fps: number;
+  pxPerSecond: number;
+}) {
   const seek = useSeek();
   return (
     <div
       className="relative border-b bg-background"
-      style={{ height: ROW_HEIGHT, width: secondsToPx(duration) }}
+      style={{ height: ROW_HEIGHT, width: secondsToPx(duration, pxPerSecond) }}
       onPointerDown={(event) => {
         const rect = event.currentTarget.getBoundingClientRect();
-        seek(pxToSeconds(event.clientX - rect.left));
+        seek(pxToSeconds(event.clientX - rect.left, pxPerSecond));
         useEditorStore.getState().selectClip(null, null);
       }}
     >
@@ -346,6 +390,7 @@ function TrackRow({ track, duration, fps }: { track: Track; duration: number; fp
           clip={clip}
           projectDuration={duration}
           fps={fps}
+          pxPerSecond={pxPerSecond}
         />
       ))}
     </div>
@@ -442,10 +487,13 @@ function TrackHeader({ track }: { track: Track }) {
 }
 
 export function Timeline() {
+  const projectId = useProjectStore((s) => s.project.id);
   const tracks = useProjectStore((s) => s.project.tracks);
   const duration = useProjectStore((s) => s.project.duration);
   const fps = useProjectStore((s) => s.project.fps);
   const deleteClip = useProjectStore((s) => s.deleteClip);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [pxPerSecond, setPxPerSecond] = useState(DEFAULT_TIMELINE_PX_PER_SECOND);
 
   // Display top render layer first; audio tracks at the bottom.
   const displayTracks = [
@@ -469,6 +517,56 @@ export function Timeline() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [deleteClip]);
 
+  useEffect(() => {
+    setPxPerSecond(DEFAULT_TIMELINE_PX_PER_SECOND);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const syncViewportBounds = () => {
+      setPxPerSecond((current) => {
+        const next = clampTimelinePxPerSecond(current, duration, container.clientWidth);
+        container.scrollLeft = clampTimelineScrollLeft(
+          container.scrollLeft,
+          duration,
+          container.clientWidth,
+          next,
+        );
+        return next;
+      });
+    };
+
+    syncViewportBounds();
+    const resizeObserver = new ResizeObserver(syncViewportBounds);
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [duration]);
+
+  const handleWheel = useCallback(
+    (event: WheelEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      if (event.deltaY === 0) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const next = zoomTimelineViewport({
+        pxPerSecond,
+        scrollLeft: event.currentTarget.scrollLeft,
+        cursorX: event.clientX - rect.left,
+        deltaY: event.deltaY,
+        duration,
+        viewportWidth: event.currentTarget.clientWidth,
+      });
+
+      setPxPerSecond(next.pxPerSecond);
+      event.currentTarget.scrollLeft = next.scrollLeft;
+    },
+    [duration, pxPerSecond],
+  );
+
   return (
     <div className="flex h-full min-h-0 border-t">
       <div className="flex shrink-0 flex-col" style={{ width: TRACK_HEADER_WIDTH }}>
@@ -477,13 +575,23 @@ export function Timeline() {
           <TrackHeader key={track.id} track={track} />
         ))}
       </div>
-      <div className="relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="relative" style={{ width: secondsToPx(duration) }}>
-          <Ruler duration={duration} />
+      <div
+        ref={scrollContainerRef}
+        className="relative min-w-0 flex-1 overflow-x-auto overflow-y-hidden"
+        onWheel={handleWheel}
+      >
+        <div className="relative" style={{ width: secondsToPx(duration, pxPerSecond) }}>
+          <Ruler duration={duration} pxPerSecond={pxPerSecond} />
           {displayTracks.map((track) => (
-            <TrackRow key={track.id} track={track} duration={duration} fps={fps} />
+            <TrackRow
+              key={track.id}
+              track={track}
+              duration={duration}
+              fps={fps}
+              pxPerSecond={pxPerSecond}
+            />
           ))}
-          <PlayheadLine />
+          <PlayheadLine pxPerSecond={pxPerSecond} />
         </div>
       </div>
     </div>
