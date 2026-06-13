@@ -27,7 +27,7 @@ export function ImportDropZone({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="relative flex h-full flex-col"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden overscroll-none"
       onDragEnter={(event) => {
         if (!event.dataTransfer.types.includes("Files")) return;
         event.preventDefault();

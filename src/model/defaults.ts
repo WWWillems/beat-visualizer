@@ -6,6 +6,7 @@ import {
   type VisualClip,
   type VisualTrack,
 } from "@/model/types";
+import { defaultModulationTemplates } from "@/renderer/presets";
 
 export function createId(): string {
   return crypto.randomUUID();
@@ -76,6 +77,9 @@ export function createVisualClip(
     seed: Math.floor(Math.random() * 2 ** 31),
     params,
     keyframes: {},
-    modulations: [],
+    modulations: defaultModulationTemplates("particleField").map((modulation) => ({
+      id: createId(),
+      ...modulation,
+    })),
   };
 }

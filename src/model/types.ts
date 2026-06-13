@@ -4,7 +4,7 @@
  * versions. Binary media lives in separate asset records keyed by assetId.
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export type AspectRatioId = "16:9" | "9:16" | "1:1" | "4:5";
 
@@ -45,7 +45,7 @@ export interface Keyframe {
   easing: EasingMode;
 }
 
-export type ModulationSource = "rms" | "bass" | "mid" | "high" | "beat";
+export type ModulationSource = "rms" | "bass" | "mid" | "high" | "beat" | "onset";
 
 /**
  * Maps an audio analysis feature onto a visual parameter:

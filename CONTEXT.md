@@ -51,7 +51,8 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Feature sampler** — deterministic function `(source, time) → 0..1`
   bridging analysis/beat grid to the renderer (`src/audio/features.ts`).
   Sources: `rms`, `bass`, `mid`, `high`, `beat` (a decaying pulse derived
-  from the beat grid).
+  from the user-correctable beat grid), `onset` (a decaying pulse derived
+  from detected transient times in analysis).
 - **Modulation** — a mapping on a visual clip: feature source → preset
   parameter, with amount and smoothing. Final value = keyframed base +
   modulation, clamped to the parameter range (`src/model/evaluate.ts`).
@@ -61,6 +62,9 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Transport** — the playback clock (`src/audio/playback.ts`), driven by the
   Web Audio context. The preview render loop follows `transport.getTime()`;
   visuals never follow requestAnimationFrame timing.
+- **Timeline viewport** — the editor-only view onto the Project timeline:
+  zoom scale plus horizontal scroll position. It is not part of the Project
+  document, not undoable, and not persisted with exports.
 - **Proof / final export** — half-resolution fast export vs full-resolution
   (1080p-class) upload-ready MP4. Both H.264 + AAC at 30 FPS.
 - **Aspect ratio layouts** — one project supports 16:9, 9:16, 1:1, 4:5;

@@ -29,7 +29,16 @@ describe("migrateProject", () => {
 
     const migrated = migrateProject(legacy);
 
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
     expect(migrated.songName).toBe("");
+  });
+
+  it("migrates version 2 projects after adding the onset modulation source", () => {
+    const legacy = createEmptyProject("Legacy") as unknown as Record<string, unknown>;
+    legacy.schemaVersion = 2;
+
+    const migrated = migrateProject(legacy);
+
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
   });
 });

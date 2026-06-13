@@ -9,7 +9,7 @@ import type {
   VisualClip,
 } from "@/model/types";
 import { ASPECT_RATIOS } from "@/model/types";
-import { ParticleFieldInstance } from "@/renderer/particleField";
+import { createPresetInstance, type VisualPresetInstance } from "@/renderer/presetRegistry";
 
 export interface RenderFrameInput {
   project: Project;
@@ -52,7 +52,7 @@ export class RenderEngine {
   private readonly compositeScene = new THREE.Scene();
   private readonly compositeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
   private readonly layerMeshes: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
-  private readonly visualInstances = new Map<string, ParticleFieldInstance>();
+  private readonly visualInstances = new Map<string, VisualPresetInstance>();
   private readonly imageTextures = new Map<string, THREE.Texture>();
   private width: number;
   private height: number;
@@ -155,7 +155,7 @@ export class RenderEngine {
       case "visual": {
         const clip = track.clips.find((c) => time >= c.start && time < c.start + c.duration);
         if (!clip) return null;
-        const { instance } = this.ensureVisualInstance(clip);
+        const instance = this.ensureVisualInstance(clip);
         if (isSeek || isPaused) {
           // A frozen or jumped timestamp can't reuse accumulated trails
           // (pausing would blow out to white, seeking would be wrong).
@@ -194,12 +194,12 @@ export class RenderEngine {
     }
   }
 
-  private ensureVisualInstance(clip: VisualClip): { instance: ParticleFieldInstance; created: boolean } {
+  private ensureVisualInstance(clip: VisualClip): VisualPresetInstance {
     let instance = this.visualInstances.get(clip.id);
-    if (instance) return { instance, created: false };
-    instance = new ParticleFieldInstance(clip.seed, this.width, this.height);
+    if (instance) return instance;
+    instance = createPresetInstance(clip.presetId, clip.seed, this.width, this.height);
     this.visualInstances.set(clip.id, instance);
-    return { instance, created: true };
+    return instance;
   }
 
   private releaseStaleInstances(project: Project, _time: number): void {

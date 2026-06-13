@@ -11,6 +11,10 @@ const migrations: Record<number, (doc: Record<string, unknown>) => Record<string
     songName: typeof doc.songName === "string" ? doc.songName : "",
     schemaVersion: 2,
   }),
+  2: (doc) => ({
+    ...doc,
+    schemaVersion: 3,
+  }),
 };
 
 export class UnsupportedSchemaError extends Error {

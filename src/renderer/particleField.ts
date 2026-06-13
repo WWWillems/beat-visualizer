@@ -200,7 +200,7 @@ export class ParticleFieldInstance {
     features: FeatureSampler,
   ): void {
     const resolve = (key: string): number => {
-      const desc = paramDescriptor("particleField", key);
+      const desc = paramDescriptor(clip.presetId, key);
       if (!desc) return 0;
       return evaluateParam(
         clip,

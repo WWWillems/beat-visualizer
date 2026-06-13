@@ -10,7 +10,7 @@ the domain language and `docs/adr/` for why the architecture is the way it is.
 - `pnpm test` — Vitest unit tests (DSP, model, store; run in Node)
 - `pnpm test:e2e` — Playwright Chromium smoke tests (import → preview → export)
 - `pnpm build` — type-check (`tsc -b`) + production build
-- One-time before e2e: `pnpm exec playwright install chromium`
+- One-time before e2e on a fresh machine: `pnpm exec playwright install chromium`
 - Regenerate the audio fixture: `node scripts/make-fixture.mjs`
 
 ## Conventions
@@ -52,6 +52,10 @@ the domain language and `docs/adr/` for why the architecture is the way it is.
   module transforms. If the browser behavior contradicts the source code
   ("impossible" bugs), restart `pnpm dev` before debugging further. The
   Playwright suite boots its own server, so it always tests current code.
+- Cursor sandbox runs can miss the existing Playwright browser cache and fail
+  with "Executable doesn't exist" under a sandbox temp path. If e2e tests have
+  worked before on this machine, rerun the same `pnpm test:e2e` outside the
+  sandbox before suggesting `pnpm exec playwright install chromium`.
 - WebCodecs, OffscreenCanvas, and WebGL only exist in a real browser. Don't
   try to unit-test them; that's what the e2e suite is for. Vitest runs in
   plain Node by design.
