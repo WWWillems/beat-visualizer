@@ -20,9 +20,13 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Project browser** — a view (File > Open) listing all stored projects
   with thumbnail, name, and created/edited dates, sorted by last edit. Cards
   open a project; projects other than the current one can be deleted.
-- **App settings** — local-first settings that persist across projects, such
-  as producer/artist identity, website, social profile URLs, and a reusable
-  custom message. Stored outside the Project document.
+- **App settings** — local-first settings that persist across projects. Stored
+  outside the Project document.
+- **Artist brand settings** — the App settings section for reusable artist
+  identity: artist name, website, social profile URLs, custom message, and
+  Artist logo.
+- **Artist logo** — reusable brand image for the artist. Stored as App
+  settings, not as a Project asset until a project explicitly places it.
 - **Track** — an ordered layer in the timeline. Three types: `audio` (mixes
   to output), `visual` (procedural preset clips), `image` (PNG/JPG overlays).
   `tracks[0]` is the bottom render layer; image/visual tracks composite with

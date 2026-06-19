@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import type { AppSettings } from "@/settings/types";
+import type { AppSettings, ArtistLogo } from "@/settings/types";
 import {
   hasValidationErrors,
   type AppSettingsValidationErrors,
+  validateArtistLogoFile,
   validateAppSettings,
 } from "@/settings/validation";
 import { useProjectStore } from "@/state/projectStore";
@@ -19,6 +21,20 @@ interface SettingsScreenProps {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="text-[10px] text-muted-foreground">{message}</p>;
+}
+
+function logoMetadataFromFile(file: File): ArtistLogo {
+  return {
+    name: file.name,
+    mimeType: file.type || (file.name.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "image/png"),
+    size: file.size,
+    updatedAt: Date.now(),
+  };
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function updateSocial(
@@ -37,26 +53,80 @@ function updateSocial(
 
 export function SettingsScreen({ onDone }: SettingsScreenProps) {
   const storedAppSettings = useSettingsStore((s) => s.appSettings);
+  const storedArtistLogoBlob = useSettingsStore((s) => s.artistLogoBlob);
   const saveAppSettings = useSettingsStore((s) => s.save);
   const projectName = useProjectStore((s) => s.project.name);
   const setProjectName = useProjectStore((s) => s.setProjectName);
   const projectSongName = useProjectStore((s) => s.project.songName);
   const setSongName = useProjectStore((s) => s.setSongName);
 
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [appDraft, setAppDraft] = useState<AppSettings>(() => storedAppSettings);
+  const [artistLogoBlobDraft, setArtistLogoBlobDraft] = useState<Blob | null | undefined>(
+    undefined,
+  );
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [projectNameDraft, setProjectNameDraft] = useState(projectName);
   const [songNameDraft, setSongNameDraft] = useState(projectSongName);
   const [errors, setErrors] = useState<AppSettingsValidationErrors>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const currentLogoBlob =
+    artistLogoBlobDraft === undefined ? storedArtistLogoBlob : artistLogoBlobDraft;
+
+  useEffect(() => {
+    if (!currentLogoBlob) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(currentLogoBlob);
+    setLogoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [currentLogoBlob]);
 
   const dirty = useMemo(
     () =>
       JSON.stringify(appDraft) !== JSON.stringify(storedAppSettings) ||
+      artistLogoBlobDraft !== undefined ||
       projectNameDraft !== projectName ||
       songNameDraft !== projectSongName,
-    [appDraft, storedAppSettings, projectNameDraft, projectName, songNameDraft, projectSongName],
+    [
+      appDraft,
+      storedAppSettings,
+      artistLogoBlobDraft,
+      projectNameDraft,
+      projectName,
+      songNameDraft,
+      projectSongName,
+    ],
   );
+
+  const setArtistLogoError = (message?: string) => {
+    setErrors((current) => {
+      const next = { ...current };
+      if (message) next.artistLogo = message;
+      else delete next.artistLogo;
+      return next;
+    });
+  };
+
+  const selectArtistLogo = (file: File) => {
+    const error = validateArtistLogoFile(file);
+    if (error) {
+      setArtistLogoError(error);
+      return;
+    }
+    setAppDraft({ ...appDraft, artistLogo: logoMetadataFromFile(file) });
+    setArtistLogoBlobDraft(file);
+    setArtistLogoError();
+  };
+
+  const removeArtistLogo = () => {
+    setAppDraft({ ...appDraft, artistLogo: null });
+    setArtistLogoBlobDraft(null);
+    setArtistLogoError();
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
 
   const save = async () => {
     const nextErrors = validateAppSettings(appDraft);
@@ -66,10 +136,10 @@ export function SettingsScreen({ onDone }: SettingsScreenProps) {
 
     setSaving(true);
     try {
-      await saveAppSettings(appDraft);
+      await saveAppSettings(appDraft, artistLogoBlobDraft);
       setProjectName(projectNameDraft.trim() || "Untitled");
       setSongName(songNameDraft);
-      onDone();
+      toast.success("Settings saved");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -101,12 +171,68 @@ export function SettingsScreen({ onDone }: SettingsScreenProps) {
 
         <section className="space-y-4 rounded-sm border bg-card p-4">
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-widest">App Settings</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest">Artist Brand Settings</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Identity and social defaults reused across projects.
+              Artist identity and social defaults reused across projects.
             </p>
           </div>
           <Separator />
+
+          <div className="grid gap-4 rounded-sm border p-3 md:grid-cols-[160px_1fr]">
+            <div className="flex aspect-square items-center justify-center overflow-hidden rounded-sm border bg-background">
+              {logoPreviewUrl && appDraft.artistLogo ? (
+                <img
+                  src={logoPreviewUrl}
+                  alt={`${appDraft.artistLogo.name} preview`}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <span className="px-4 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+                  No logo
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col justify-between gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="artist-logo">Artist logo</Label>
+                <p className="text-xs text-muted-foreground">
+                  Brand logo reused across projects. It will not appear in renders until a project
+                  places it as an image layer.
+                </p>
+                {appDraft.artistLogo ? (
+                  <p className="text-[10px] text-muted-foreground">
+                    {appDraft.artistLogo.name} - {formatFileSize(appDraft.artistLogo.size)} -{" "}
+                    {appDraft.artistLogo.mimeType}
+                  </p>
+                ) : null}
+                <FieldError message={errors.artistLogo} />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={logoInputRef}
+                  id="artist-logo"
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) selectArtistLogo(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <Button variant="outline" onClick={() => logoInputRef.current?.click()}>
+                  {appDraft.artistLogo ? "Replace logo" : "Upload logo"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={removeArtistLogo}
+                  disabled={!appDraft.artistLogo}
+                >
+                  Remove logo
+                </Button>
+              </div>
+            </div>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">

@@ -20,6 +20,10 @@ interface BeatVisualizerDB extends DBSchema {
     key: string;
     value: AppSettings;
   };
+  appAssets: {
+    key: string;
+    value: Blob;
+  };
   thumbnails: {
     key: string;
     value: Blob;
@@ -27,9 +31,17 @@ interface BeatVisualizerDB extends DBSchema {
 }
 
 const DB_NAME = "beat-visualizer";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const APP_SETTINGS_KEY = "current";
-const REQUIRED_STORES = ["projects", "assets", "meta", "appSettings", "thumbnails"] as const;
+const ARTIST_LOGO_KEY = "artistLogo";
+const REQUIRED_STORES = [
+  "projects",
+  "assets",
+  "meta",
+  "appSettings",
+  "appAssets",
+  "thumbnails",
+] as const;
 
 let dbPromise: Promise<IDBPDatabase<BeatVisualizerDB>> | null = null;
 
@@ -38,6 +50,7 @@ function createMissingStores(db: IDBPDatabase<BeatVisualizerDB>): void {
   if (!db.objectStoreNames.contains("assets")) db.createObjectStore("assets");
   if (!db.objectStoreNames.contains("meta")) db.createObjectStore("meta");
   if (!db.objectStoreNames.contains("appSettings")) db.createObjectStore("appSettings");
+  if (!db.objectStoreNames.contains("appAssets")) db.createObjectStore("appAssets");
   if (!db.objectStoreNames.contains("thumbnails")) db.createObjectStore("thumbnails");
 }
 
@@ -137,4 +150,19 @@ export async function loadAppSettings(): Promise<AppSettings> {
 export async function saveAppSettings(settings: AppSettings): Promise<void> {
   const db = await getDb();
   await db.put("appSettings", normalizeAppSettings(settings), APP_SETTINGS_KEY);
+}
+
+export async function loadArtistLogoBlob(): Promise<Blob | null> {
+  const db = await getDb();
+  return (await db.get("appAssets", ARTIST_LOGO_KEY)) ?? null;
+}
+
+export async function saveArtistLogoBlob(blob: Blob): Promise<void> {
+  const db = await getDb();
+  await db.put("appAssets", blob, ARTIST_LOGO_KEY);
+}
+
+export async function deleteArtistLogoBlob(): Promise<void> {
+  const db = await getDb();
+  await db.delete("appAssets", ARTIST_LOGO_KEY);
 }

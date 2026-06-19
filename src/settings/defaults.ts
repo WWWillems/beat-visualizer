@@ -10,6 +10,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     x: "",
   },
   customMessage: "",
+  artistLogo: null,
 };
 
 export function normalizeAppSettings(settings: Partial<AppSettings> | null | undefined): AppSettings {
@@ -23,5 +24,13 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | null | und
       x: settings?.socials?.x ?? "",
     },
     customMessage: settings?.customMessage ?? "",
+    artistLogo: settings?.artistLogo
+      ? {
+          name: settings.artistLogo.name ?? "Artist logo",
+          mimeType: settings.artistLogo.mimeType ?? "application/octet-stream",
+          size: settings.artistLogo.size ?? 0,
+          updatedAt: settings.artistLogo.updatedAt ?? 0,
+        }
+      : null,
   };
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_APP_SETTINGS } from "@/settings/defaults";
-import { hasValidationErrors, validateAppSettings } from "@/settings/validation";
+import {
+  hasValidationErrors,
+  validateAppSettings,
+  validateArtistLogoFile,
+} from "@/settings/validation";
 
 describe("validateAppSettings", () => {
   it("allows empty optional URLs", () => {
@@ -39,5 +43,21 @@ describe("validateAppSettings", () => {
     expect(errors.instagram).toBeDefined();
     expect(errors.tiktok).toBeDefined();
     expect(hasValidationErrors(errors)).toBe(true);
+  });
+});
+
+describe("validateArtistLogoFile", () => {
+  it("allows PNG, JPG, and SVG logo files", () => {
+    expect(validateArtistLogoFile(new File(["logo"], "logo.png", { type: "image/png" }))).toBeNull();
+    expect(validateArtistLogoFile(new File(["logo"], "logo.jpg", { type: "image/jpeg" }))).toBeNull();
+    expect(
+      validateArtistLogoFile(new File(["<svg />"], "logo.svg", { type: "image/svg+xml" })),
+    ).toBeNull();
+  });
+
+  it("rejects unsupported logo files", () => {
+    const error = validateArtistLogoFile(new File(["logo"], "logo.gif", { type: "image/gif" }));
+
+    expect(error).toContain("PNG, JPG, or SVG");
   });
 });
