@@ -193,6 +193,69 @@ export const SPECTRAL_TERRAIN_PARAMS: ParamDescriptor[] = [
   { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.82, modulatable: false },
 ];
 
+export const FLUID_FIELD_PARAMS: ParamDescriptor[] = [
+  { key: "flow", label: "Flow", min: 0, max: 2, step: 0.01, defaultValue: 0.6, modulatable: true },
+  { key: "scale", label: "Scale", min: 0.5, max: 6, step: 0.01, defaultValue: 2.2, modulatable: true },
+  { key: "warp", label: "Warp", min: 0, max: 3, step: 0.01, defaultValue: 1.4, modulatable: true },
+  { key: "contrast", label: "Contrast", min: 0.5, max: 4, step: 0.01, defaultValue: 1.8, modulatable: true },
+  { key: "bands", label: "Bands", min: 0, max: 1, step: 0.01, defaultValue: 0, modulatable: true },
+  { key: "brightness", label: "Brightness", min: 0, max: 1, step: 0.01, defaultValue: 0.85, modulatable: true },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.8, modulatable: false },
+];
+
+export const HALFTONE_PARAMS: ParamDescriptor[] = [
+  { key: "grid", label: "Grid", min: 8, max: 120, step: 1, defaultValue: 48, modulatable: false },
+  { key: "dotScale", label: "Dot Size", min: 0.1, max: 0.7, step: 0.01, defaultValue: 0.45, modulatable: true },
+  { key: "field", label: "Field", min: 0, max: 2, step: 0.01, defaultValue: 0.5, modulatable: true },
+  { key: "spectrum", label: "Spectrum", min: 0, max: 1, step: 0.01, defaultValue: 0.5, modulatable: true },
+  { key: "contrast", label: "Contrast", min: 0.5, max: 4, step: 0.01, defaultValue: 1.6, modulatable: true },
+  { key: "brightness", label: "Brightness", min: 0, max: 1, step: 0.01, defaultValue: 0.9, modulatable: true },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.85, modulatable: false },
+];
+
+export const LATTICE_PARAMS: ParamDescriptor[] = [
+  { key: "cells", label: "Cells", min: 2, max: 10, step: 1, defaultValue: 6, modulatable: false },
+  { key: "twist", label: "Twist", min: 0, max: 2, step: 0.01, defaultValue: 0, modulatable: true },
+  { key: "displace", label: "Displace", min: 0, max: 1, step: 0.01, defaultValue: 0.25, modulatable: true },
+  { key: "spin", label: "Spin", min: -2, max: 2, step: 0.01, defaultValue: 0.3, modulatable: true },
+  { key: "depth", label: "Depth", min: 0, max: 1, step: 0.01, defaultValue: 0.5, modulatable: true },
+  { key: "brightness", label: "Brightness", min: 0, max: 1, step: 0.01, defaultValue: 0.8, modulatable: true },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.82, modulatable: false },
+  { key: "trail", label: "Trail", min: 0, max: 0.98, step: 0.01, defaultValue: 0.4, modulatable: false },
+];
+
+export const STROKES_PARAMS: ParamDescriptor[] = [
+  { key: "count", label: "Strokes", min: 200, max: 6000, step: 100, defaultValue: 1400, modulatable: false },
+  { key: "length", label: "Length", min: 0, max: 1.5, step: 0.01, defaultValue: 0.7, modulatable: true },
+  { key: "curl", label: "Curl", min: 0, max: 3, step: 0.01, defaultValue: 1.2, modulatable: true },
+  { key: "speed", label: "Speed", min: 0, max: 2, step: 0.01, defaultValue: 0.5, modulatable: true },
+  { key: "spread", label: "Spread", min: 0.05, max: 1.5, step: 0.01, defaultValue: 0.5, modulatable: true },
+  { key: "wobble", label: "Wobble", min: 0, max: 1, step: 0.01, defaultValue: 0.3, modulatable: true },
+  { key: "brightness", label: "Brightness", min: 0, max: 1, step: 0.01, defaultValue: 0.8, modulatable: true },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.8, modulatable: false },
+  { key: "trail", label: "Trail", min: 0, max: 0.98, step: 0.01, defaultValue: 0.7, modulatable: false },
+];
+
+export const GRAIN_FIELD_PARAMS: ParamDescriptor[] = [
+  { key: "shape", label: "Shape", min: 0, max: 1, step: 1, defaultValue: 0, modulatable: false },
+  { key: "size", label: "Size", min: 0.1, max: 0.9, step: 0.01, defaultValue: 0.46, modulatable: true },
+  { key: "edge", label: "Edge", min: 0.004, max: 0.2, step: 0.001, defaultValue: 0.03, modulatable: true },
+  { key: "grain", label: "Grain", min: 0, max: 1, step: 0.01, defaultValue: 0.55, modulatable: true },
+  { key: "density", label: "Density", min: 1, max: 6, step: 0.1, defaultValue: 1.6, modulatable: true },
+  { key: "brightness", label: "Brightness", min: 0, max: 1, step: 0.01, defaultValue: 0.85, modulatable: true },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.85, modulatable: false },
+];
+
+export const NEBULA_PARAMS: ParamDescriptor[] = [
+  { key: "scale", label: "Scale", min: 1, max: 8, step: 0.1, defaultValue: 3.5, modulatable: true },
+  { key: "cells", label: "Cells", min: 0, max: 1, step: 0.01, defaultValue: 0.6, modulatable: true },
+  { key: "drift", label: "Drift", min: 0, max: 2, step: 0.01, defaultValue: 0.4, modulatable: true },
+  { key: "contrast", label: "Contrast", min: 0.5, max: 4, step: 0.01, defaultValue: 2.0, modulatable: true },
+  { key: "falloff", label: "Falloff", min: 0, max: 1, step: 0.01, defaultValue: 0.5, modulatable: true },
+  { key: "brightness", label: "Brightness", min: 0, max: 1, step: 0.01, defaultValue: 0.85, modulatable: true },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.82, modulatable: false },
+];
+
 export const PRESETS: Record<VisualPresetId, PresetDescriptor> = {
   particleField: {
     id: "particleField",
@@ -255,6 +318,66 @@ export const PRESETS: Record<VisualPresetId, PresetDescriptor> = {
       { param: "height", source: "bass", amount: 0.18, smoothing: 0.28 },
       { param: "contrast", source: "mid", amount: 0.3, smoothing: 0.34 },
       { param: "brightness", source: "rms", amount: 0.14, smoothing: 0.25 },
+    ],
+  },
+  fluidField: {
+    id: "fluidField",
+    label: "Fluid",
+    params: FLUID_FIELD_PARAMS,
+    defaultModulations: [
+      { param: "flow", source: "rms", amount: 0.24, smoothing: 0.3 },
+      { param: "warp", source: "mid", amount: 0.4, smoothing: 0.32 },
+      { param: "brightness", source: "bass", amount: 0.16, smoothing: 0.26 },
+    ],
+  },
+  halftone: {
+    id: "halftone",
+    label: "Halftone",
+    params: HALFTONE_PARAMS,
+    defaultModulations: [
+      { param: "dotScale", source: "bass", amount: 0.18, smoothing: 0.22 },
+      { param: "field", source: "mid", amount: 0.22, smoothing: 0.3 },
+      { param: "brightness", source: "high", amount: 0.16, smoothing: 0.2 },
+    ],
+  },
+  lattice: {
+    id: "lattice",
+    label: "Lattice",
+    params: LATTICE_PARAMS,
+    defaultModulations: [
+      { param: "displace", source: "bass", amount: 0.26, smoothing: 0.24 },
+      { param: "spin", source: "beat", amount: 0.16, smoothing: 0.18 },
+      { param: "brightness", source: "high", amount: 0.16, smoothing: 0.22 },
+    ],
+  },
+  strokes: {
+    id: "strokes",
+    label: "Strokes",
+    params: STROKES_PARAMS,
+    defaultModulations: [
+      { param: "curl", source: "mid", amount: 0.3, smoothing: 0.3 },
+      { param: "length", source: "onset", amount: 0.2, smoothing: 0.08 },
+      { param: "brightness", source: "rms", amount: 0.16, smoothing: 0.24 },
+    ],
+  },
+  grainField: {
+    id: "grainField",
+    label: "Grain",
+    params: GRAIN_FIELD_PARAMS,
+    defaultModulations: [
+      { param: "grain", source: "high", amount: 0.24, smoothing: 0.12 },
+      { param: "size", source: "bass", amount: 0.14, smoothing: 0.26 },
+      { param: "brightness", source: "rms", amount: 0.16, smoothing: 0.22 },
+    ],
+  },
+  nebula: {
+    id: "nebula",
+    label: "Nebula",
+    params: NEBULA_PARAMS,
+    defaultModulations: [
+      { param: "drift", source: "rms", amount: 0.2, smoothing: 0.3 },
+      { param: "scale", source: "bass", amount: 0.5, smoothing: 0.28 },
+      { param: "brightness", source: "high", amount: 0.16, smoothing: 0.2 },
     ],
   },
 };
@@ -481,6 +604,138 @@ export const LOOKS: LookDescriptor[] = [
       reactivity: 0.86,
     },
     defaultModulations: PRESETS.spectralTerrain.defaultModulations,
+  },
+  {
+    id: "fluid-ink-bloom",
+    presetId: "fluidField",
+    label: "Ink Bloom",
+    seed: 30142,
+    params: { flow: 0.5, scale: 2.0, warp: 2.1, contrast: 2.4, bands: 0, brightness: 0.88, reactivity: 0.82 },
+    defaultModulations: PRESETS.fluidField.defaultModulations,
+  },
+  {
+    id: "fluid-liquid-bands",
+    presetId: "fluidField",
+    label: "Liquid Bands",
+    seed: 30255,
+    params: { flow: 0.7, scale: 2.6, warp: 1.0, contrast: 1.5, bands: 0.85, brightness: 0.8, reactivity: 0.78 },
+    defaultModulations: [
+      { param: "flow", source: "bass", amount: 0.22, smoothing: 0.3 },
+      { param: "bands", source: "mid", amount: 0.16, smoothing: 0.32 },
+      { param: "brightness", source: "rms", amount: 0.16, smoothing: 0.26 },
+    ],
+  },
+  {
+    id: "fluid-smoke-veil",
+    presetId: "fluidField",
+    label: "Smoke Veil",
+    seed: 30388,
+    params: { flow: 0.32, scale: 1.5, warp: 1.6, contrast: 2.0, bands: 0, brightness: 0.62, reactivity: 0.7 },
+    defaultModulations: PRESETS.fluidField.defaultModulations,
+  },
+  {
+    id: "halftone-dot-grid",
+    presetId: "halftone",
+    label: "Dot Grid",
+    seed: 41011,
+    params: { grid: 52, dotScale: 0.42, field: 0.45, spectrum: 0.4, contrast: 1.6, brightness: 0.9, reactivity: 0.85 },
+    defaultModulations: PRESETS.halftone.defaultModulations,
+  },
+  {
+    id: "halftone-pulse-matrix",
+    presetId: "halftone",
+    label: "Pulse Matrix",
+    seed: 41124,
+    params: { grid: 26, dotScale: 0.6, field: 0.35, spectrum: 0.75, contrast: 1.9, brightness: 0.92, reactivity: 0.9 },
+    defaultModulations: [
+      { param: "dotScale", source: "beat", amount: 0.24, smoothing: 0.16 },
+      { param: "spectrum", source: "mid", amount: 0.2, smoothing: 0.28 },
+      { param: "brightness", source: "high", amount: 0.18, smoothing: 0.2 },
+    ],
+  },
+  {
+    id: "lattice-wire-cube",
+    presetId: "lattice",
+    label: "Wire Cube",
+    seed: 52017,
+    params: { cells: 5, twist: 0, displace: 0.14, spin: 0.28, depth: 0.5, brightness: 0.82, reactivity: 0.8, trail: 0.35 },
+    defaultModulations: PRESETS.lattice.defaultModulations,
+  },
+  {
+    id: "lattice-coil",
+    presetId: "lattice",
+    label: "Coil",
+    seed: 52130,
+    params: { cells: 7, twist: 1.2, displace: 0.28, spin: 0.4, depth: 0.6, brightness: 0.8, reactivity: 0.84, trail: 0.45 },
+    defaultModulations: [
+      { param: "twist", source: "mid", amount: 0.22, smoothing: 0.34 },
+      { param: "displace", source: "bass", amount: 0.26, smoothing: 0.24 },
+      { param: "brightness", source: "high", amount: 0.16, smoothing: 0.22 },
+    ],
+  },
+  {
+    id: "lattice-cage",
+    presetId: "lattice",
+    label: "Cage",
+    seed: 52243,
+    params: { cells: 8, twist: 0.3, displace: 0.18, spin: 0.62, depth: 0.7, brightness: 0.78, reactivity: 0.82, trail: 0.55 },
+    defaultModulations: PRESETS.lattice.defaultModulations,
+  },
+  {
+    id: "strokes-brush-swirl",
+    presetId: "strokes",
+    label: "Brush Swirl",
+    seed: 63019,
+    params: { count: 1800, length: 0.55, curl: 2.2, speed: 0.45, spread: 0.42, wobble: 0.32, brightness: 0.82, reactivity: 0.82, trail: 0.74 },
+    defaultModulations: PRESETS.strokes.defaultModulations,
+  },
+  {
+    id: "strokes-ink-fibers",
+    presetId: "strokes",
+    label: "Ink Fibers",
+    seed: 63132,
+    params: { count: 2600, length: 1.05, curl: 0.5, speed: 0.6, spread: 0.28, wobble: 0.5, brightness: 0.78, reactivity: 0.84, trail: 0.66 },
+    defaultModulations: [
+      { param: "length", source: "onset", amount: 0.26, smoothing: 0.07 },
+      { param: "wobble", source: "high", amount: 0.22, smoothing: 0.18 },
+      { param: "brightness", source: "rms", amount: 0.16, smoothing: 0.24 },
+    ],
+  },
+  {
+    id: "grain-static-square",
+    presetId: "grainField",
+    label: "Static Square",
+    seed: 74015,
+    params: { shape: 0, size: 0.46, edge: 0.028, grain: 0.55, density: 1.6, brightness: 0.88, reactivity: 0.85 },
+    defaultModulations: PRESETS.grainField.defaultModulations,
+  },
+  {
+    id: "grain-noise-ring",
+    presetId: "grainField",
+    label: "Noise Ring",
+    seed: 74128,
+    params: { shape: 1, size: 0.4, edge: 0.02, grain: 0.48, density: 2.0, brightness: 0.86, reactivity: 0.82 },
+    defaultModulations: PRESETS.grainField.defaultModulations,
+  },
+  {
+    id: "nebula-cell-cluster",
+    presetId: "nebula",
+    label: "Cell Cluster",
+    seed: 85011,
+    params: { scale: 4.2, cells: 0.82, drift: 0.45, contrast: 1.8, falloff: 0.6, brightness: 0.86, reactivity: 0.82 },
+    defaultModulations: PRESETS.nebula.defaultModulations,
+  },
+  {
+    id: "nebula-plasma-cloud",
+    presetId: "nebula",
+    label: "Plasma Cloud",
+    seed: 85124,
+    params: { scale: 2.6, cells: 0.2, drift: 0.35, contrast: 2.6, falloff: 0.45, brightness: 0.84, reactivity: 0.8 },
+    defaultModulations: [
+      { param: "drift", source: "rms", amount: 0.2, smoothing: 0.3 },
+      { param: "contrast", source: "mid", amount: 0.4, smoothing: 0.32 },
+      { param: "brightness", source: "bass", amount: 0.16, smoothing: 0.26 },
+    ],
   },
 ];
 

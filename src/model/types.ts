@@ -84,7 +84,13 @@ export type VisualPresetId =
   | "radialBurst"
   | "spectralSwarm"
   | "spectralHalo"
-  | "spectralTerrain";
+  | "spectralTerrain"
+  | "fluidField"
+  | "halftone"
+  | "lattice"
+  | "strokes"
+  | "grainField"
+  | "nebula";
 
 export interface VisualClip extends ClipBase {
   type: "visual";

@@ -10,6 +10,7 @@ import type {
   VisualClip,
 } from "@/model/types";
 import { ASPECT_RATIOS } from "@/model/types";
+import { PostFx } from "@/renderer/postFx";
 import { createPresetInstance, type VisualPresetInstance } from "@/renderer/presetRegistry";
 
 export interface RenderFrameInput {
@@ -59,6 +60,7 @@ export class RenderEngine {
     { presetId: VisualClip["presetId"]; seed: number; instance: VisualPresetInstance }
   >();
   private readonly imageTextures = new Map<string, THREE.Texture>();
+  private readonly postFx: PostFx;
   private width: number;
   private height: number;
   private lastTime: number | null = null;
@@ -76,6 +78,7 @@ export class RenderEngine {
     this.width = width;
     this.height = height;
     this.renderer.setSize(width, height, false);
+    this.postFx = new PostFx(width, height);
   }
 
   setSize(width: number, height: number): void {
@@ -83,6 +86,7 @@ export class RenderEngine {
     this.width = width;
     this.height = height;
     this.renderer.setSize(width, height, false);
+    this.postFx.setSize(width, height);
     for (const entry of this.visualInstances.values()) {
       entry.instance.setSize(width, height);
     }
@@ -141,8 +145,13 @@ export class RenderEngine {
       mesh.material.needsUpdate = true;
     }
 
-    this.renderer.setRenderTarget(null);
+    // Composite layers into the post-processing scene buffer, then run the
+    // global post stage (bloom + grain + contrast) out to the canvas.
+    this.renderer.setRenderTarget(this.postFx.sceneTarget);
+    this.renderer.setClearColor(0x000000, 1);
+    this.renderer.clear(true, false, false);
     this.renderer.render(this.compositeScene, this.compositeCamera);
+    this.postFx.render(this.renderer, time);
   }
 
   private renderTrackLayer(
@@ -297,6 +306,7 @@ export class RenderEngine {
   }
 
   dispose(): void {
+    this.postFx.dispose();
     for (const entry of this.visualInstances.values()) entry.instance.dispose();
     this.visualInstances.clear();
     for (const texture of this.imageTextures.values()) texture.dispose();

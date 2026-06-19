@@ -16,7 +16,7 @@ describe("particle field preset", () => {
 });
 
 describe("look library", () => {
-  it("keeps a reduced set of curated looks across all preset families", () => {
+  it("offers curated looks across every preset family", () => {
     expect(Object.keys(PRESETS)).toEqual([
       "particleField",
       "flowField",
@@ -24,14 +24,26 @@ describe("look library", () => {
       "spectralSwarm",
       "spectralHalo",
       "spectralTerrain",
+      "fluidField",
+      "halftone",
+      "lattice",
+      "strokes",
+      "grainField",
+      "nebula",
     ]);
-    expect(LOOKS).toHaveLength(11);
+    expect(LOOKS).toHaveLength(25);
     expect(looksForPreset("particleField")).toHaveLength(2);
     expect(looksForPreset("flowField")).toHaveLength(2);
     expect(looksForPreset("radialBurst")).toHaveLength(4);
     expect(looksForPreset("spectralSwarm")).toHaveLength(1);
     expect(looksForPreset("spectralHalo")).toHaveLength(1);
     expect(looksForPreset("spectralTerrain")).toHaveLength(1);
+    expect(looksForPreset("fluidField")).toHaveLength(3);
+    expect(looksForPreset("halftone")).toHaveLength(2);
+    expect(looksForPreset("lattice")).toHaveLength(3);
+    expect(looksForPreset("strokes")).toHaveLength(2);
+    expect(looksForPreset("grainField")).toHaveLength(2);
+    expect(looksForPreset("nebula")).toHaveLength(2);
   });
 
   it("uses a particle field look as the default visual starting point", () => {
