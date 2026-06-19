@@ -166,7 +166,7 @@ export function ProjectBrowser({ onOpened }: ProjectBrowserProps) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate text-xs font-bold uppercase tracking-wider">
-                        {project.songName.trim() || project.name}
+                        {project.name}
                       </span>
                       {isCurrent && (
                         <span className="shrink-0 rounded-sm border px-1 text-[9px] uppercase tracking-wider text-muted-foreground">
@@ -208,8 +208,8 @@ export function ProjectBrowser({ onOpened }: ProjectBrowserProps) {
           <DialogHeader>
             <DialogTitle>Delete project?</DialogTitle>
             <DialogDescription>
-              This will remove "{pendingDelete?.songName.trim() || pendingDelete?.name}" from the
-              project browser. You can not undo this action.
+              This will remove "{pendingDelete?.name}" from the project browser. You can not undo
+              this action.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

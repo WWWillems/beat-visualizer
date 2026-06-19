@@ -19,6 +19,7 @@ interface ProjectState {
   loadProject: (project: Project) => void;
   /** Applies an immer recipe to the project and bumps modifiedAt. */
   updateProject: (recipe: (project: Project) => void) => void;
+  setProjectName: (name: string) => void;
   setAspectRatio: (ratio: AspectRatioId) => void;
   setDuration: (seconds: number) => void;
   setSongName: (songName: string) => void;
@@ -61,6 +62,12 @@ export const useProjectStore = create<ProjectState>()(
       updateProject: (recipe) =>
         set((state) => {
           recipe(state.project as Project);
+          state.project.modifiedAt = Date.now();
+        }),
+
+      setProjectName: (name) =>
+        set((state) => {
+          state.project.name = name;
           state.project.modifiedAt = Date.now();
         }),
 

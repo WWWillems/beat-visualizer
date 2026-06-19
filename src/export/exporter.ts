@@ -124,7 +124,7 @@ export class ExportCancelledError extends Error {
 }
 
 export function exportFileBaseName(project: Project): string {
-  const rawName = project.songName.trim() || project.name;
+  const rawName = project.name;
   const safeName = rawName.replace(/[^\w-]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
   return safeName || "beat_visualizer";
 }

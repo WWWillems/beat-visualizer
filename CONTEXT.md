@@ -10,8 +10,10 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
   selection, and undo history. Previously stored projects and their assets
   are preserved (the app is multi-project); App settings are preserved
   because they are cross-project.
-- **Song name** — project-level metadata naming the current song. Separate
-  from the Project name, which labels the editor/project document.
+- **Song name** — project-level metadata naming the current song, intended
+  for future in-render branding/templates. Separate from the Project name.
+- **Project name** — the label for the editor/project document. Shown in the
+  editor header and project browser, and used for export filenames.
 - **Project thumbnail** — a small deterministic render of the frame at 25%
   of the project timeline, regenerated (debounced) after edits and stored as
   a Blob keyed by project id. Shown in the project browser.

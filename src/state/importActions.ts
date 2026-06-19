@@ -14,6 +14,13 @@ function firstTrackOfType(project: Project, type: "audio" | "visual" | "image") 
   return project.tracks.find((t) => t.type === type);
 }
 
+function projectNameFromAudioFilename(fileName: string): string {
+  const trimmed = fileName.trim();
+  const dot = trimmed.lastIndexOf(".");
+  const stem = dot > 0 ? trimmed.slice(0, dot) : dot === 0 && !trimmed.slice(1).includes(".") ? "" : trimmed;
+  return stem.trim() || "Untitled";
+}
+
 /**
  * Imports the primary audio file: decodes on the main thread, analyzes in a
  * worker, then updates the project (asset, clip, duration, beat grid) and the
@@ -43,6 +50,11 @@ export async function importAudioFile(file: File): Promise<void> {
     };
 
     store.updateProject((project) => {
+      const projectName = projectNameFromAudioFilename(file.name);
+      project.name = projectName;
+      if (project.songName.trim() === "") {
+        project.songName = projectName;
+      }
       project.assets.push({
         id: assetId,
         kind: "audio",

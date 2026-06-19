@@ -3,14 +3,14 @@ import { createEmptyProject } from "@/model/defaults";
 import { exportFileBaseName } from "@/export/exporter";
 
 describe("exportFileBaseName", () => {
-  it("prefers songName over project name", () => {
+  it("uses project name even when songName is set", () => {
     const project = createEmptyProject("Project File");
     project.songName = "Night Drive";
 
-    expect(exportFileBaseName(project)).toBe("night_drive");
+    expect(exportFileBaseName(project)).toBe("project_file");
   });
 
-  it("falls back to project name when songName is blank", () => {
+  it("uses project name when songName is blank", () => {
     const project = createEmptyProject("Project File");
 
     expect(exportFileBaseName(project)).toBe("project_file");

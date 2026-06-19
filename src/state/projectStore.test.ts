@@ -143,4 +143,15 @@ describe("projectStore", () => {
     redo();
     expect(useProjectStore.getState().project.songName).toBe("Night Drive");
   });
+
+  it("sets the project name as an undoable project edit", () => {
+    useProjectStore.getState().setProjectName("Release Cut");
+    expect(useProjectStore.getState().project.name).toBe("Release Cut");
+
+    undo();
+    expect(useProjectStore.getState().project.name).toBe("Store Test");
+
+    redo();
+    expect(useProjectStore.getState().project.name).toBe("Release Cut");
+  });
 });
