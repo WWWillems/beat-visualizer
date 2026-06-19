@@ -275,7 +275,7 @@ function VisualClipSection({ track, clip }: { track: Track; clip: VisualClip }) 
                     })
                   }
                 >
-                  <SelectTrigger size="sm" className="h-7 flex-1 text-xs">
+                <SelectTrigger size="sm" className="h-7 min-w-0 flex-1 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -296,7 +296,7 @@ function VisualClipSection({ track, clip }: { track: Track; clip: VisualClip }) 
                     })
                   }
                 >
-                  <SelectTrigger size="sm" className="h-7 flex-1 text-xs">
+                <SelectTrigger size="sm" className="h-7 min-w-0 flex-1 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -445,7 +445,7 @@ export function Inspector() {
   const { track, clip } = findSelected(project, selectedTrackId, selectedClipId);
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col gap-4 overflow-y-auto border-l p-3">
+    <div className="flex h-full w-80 shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto border-l p-3">
       <BeatGridSection />
       <Separator />
       {track && clip ? (
