@@ -6,6 +6,12 @@
 const blobs = new Map<string, Blob>();
 const imageBitmaps = new Map<string, ImageBitmap>();
 
+export async function createTextureImageBitmap(source: Blob): Promise<ImageBitmap> {
+  // Three.js cannot apply Texture.flipY to ImageBitmap uploads; decode in the
+  // orientation WebGL expects so imported images render upright.
+  return createImageBitmap(source, { imageOrientation: "flipY" });
+}
+
 export function putBlob(assetId: string, blob: Blob): void {
   blobs.set(assetId, blob);
 }

@@ -3,7 +3,7 @@ import { transport } from "@/audio/playback";
 import { createId, createVisualClip } from "@/model/defaults";
 import type { AudioClip, ImageClip, Project } from "@/model/types";
 import { useEditorStore } from "@/state/editorStore";
-import { putBlob, putImageBitmap } from "@/state/mediaCache";
+import { createTextureImageBitmap, putBlob, putImageBitmap } from "@/state/mediaCache";
 import { useProjectStore } from "@/state/projectStore";
 import { saveAssetBlob } from "@/storage/db";
 import { fitClipsToDuration } from "@/timeline/clips";
@@ -89,7 +89,7 @@ export async function importImageFile(file: File): Promise<void> {
       `Image is ${(file.size / 1024 / 1024).toFixed(0)} MB; the limit is ${MAX_IMAGE_FILE_BYTES / 1024 / 1024} MB.`,
     );
   }
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createTextureImageBitmap(file);
   const assetId = createId();
   putBlob(assetId, file);
   putImageBitmap(assetId, bitmap);

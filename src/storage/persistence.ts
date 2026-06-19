@@ -4,7 +4,7 @@ import { migrateProject } from "@/model/schema";
 import type { Project } from "@/model/types";
 import { generateAndStoreThumbnail } from "@/renderer/thumbnail";
 import { useEditorStore } from "@/state/editorStore";
-import { putBlob, putImageBitmap } from "@/state/mediaCache";
+import { createTextureImageBitmap, putBlob, putImageBitmap } from "@/state/mediaCache";
 import { useProjectStore } from "@/state/projectStore";
 import { useSettingsStore } from "@/state/settingsStore";
 import { loadAssetBlob, loadCurrentProjectDoc, saveAssetBlob, saveProjectDoc } from "@/storage/db";
@@ -80,7 +80,7 @@ export async function restoreProjectMedia(project: Project): Promise<void> {
     putBlob(asset.id, blob);
 
     if (asset.kind === "image") {
-      const bitmap = await createImageBitmap(blob);
+      const bitmap = await createTextureImageBitmap(blob);
       putImageBitmap(asset.id, bitmap);
     } else if (asset.kind === "audio" && asset.id === project.primaryAudioAssetId) {
       try {
