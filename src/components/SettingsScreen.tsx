@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,11 @@ function updateSocial(
   };
 }
 
-export function SettingsScreen() {
+interface SettingsScreenProps {
+  onBackToEditor: () => void;
+}
+
+export function SettingsScreen({ onBackToEditor }: SettingsScreenProps) {
   const storedAppSettings = useSettingsStore((s) => s.appSettings);
   const storedArtistLogoBlob = useSettingsStore((s) => s.artistLogoBlob);
   const saveAppSettings = useSettingsStore((s) => s.save);
@@ -162,6 +167,12 @@ export function SettingsScreen() {
   return (
     <main className="min-h-0 flex-1 overflow-y-auto bg-background">
       <div className="mx-auto flex max-w-4xl flex-col gap-8 p-6">
+        <div>
+          <Button variant="outline" size="sm" onClick={onBackToEditor}>
+            <ArrowLeft /> Back to editor
+          </Button>
+        </div>
+
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold uppercase tracking-widest">Settings</h2>

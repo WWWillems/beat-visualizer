@@ -1,15 +1,13 @@
 import { type KeyboardEvent, useEffect, useState } from "react";
 import { ExportDialog } from "@/components/ExportDialog";
-import { FileMenu } from "@/components/FileMenu";
 import { ImportDropZone } from "@/components/ImportDropZone";
-import { ImportMenu } from "@/components/ImportMenu";
 import { Inspector } from "@/components/Inspector";
+import { ProjectMenu } from "@/components/ProjectMenu";
 import { ProjectBrowser } from "@/components/ProjectBrowser";
 import { RenderView } from "@/components/RenderView";
 import { SettingsScreen } from "@/components/SettingsScreen";
 import { Timeline } from "@/components/Timeline";
 import { TransportBar } from "@/components/TransportBar";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -95,15 +93,13 @@ export default function App() {
         <h1 className="text-sm font-bold uppercase tracking-widest">Beat Visualizer</h1>
         <ProjectTitle />
         <div className="flex-1" />
-        <FileMenu onNewProject={() => setView("editor")} onOpenBrowser={() => setView("projects")} />
-        <ImportMenu />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setView((current) => (current === "settings" ? "editor" : "settings"))}
-        >
-          {view === "settings" ? "Editor" : "Settings"}
-        </Button>
+        <ProjectMenu
+          onNewProject={() => setView("editor")}
+          onOpenBrowser={() => setView("projects")}
+          onToggleSettings={() =>
+            setView((current) => (current === "settings" ? "editor" : "settings"))
+          }
+        />
         <Select value={aspectRatio} onValueChange={(v) => setAspectRatio(v as AspectRatioId)}>
           <SelectTrigger size="sm" className="w-28 text-xs">
             <SelectValue />
@@ -120,7 +116,7 @@ export default function App() {
       </header>
 
       {view === "settings" ? (
-        <SettingsScreen />
+        <SettingsScreen onBackToEditor={() => setView("editor")} />
       ) : view === "projects" ? (
         <ProjectBrowser onOpened={() => setView("editor")} />
       ) : (
