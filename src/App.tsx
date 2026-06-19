@@ -120,7 +120,7 @@ export default function App() {
       </header>
 
       {view === "settings" ? (
-        <SettingsScreen onDone={() => setView("editor")} />
+        <SettingsScreen />
       ) : view === "projects" ? (
         <ProjectBrowser onOpened={() => setView("editor")} />
       ) : (

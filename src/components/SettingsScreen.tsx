@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { normalizeAppSettings } from "@/settings/defaults";
 import type { AppSettings, ArtistLogo } from "@/settings/types";
 import {
   hasValidationErrors,
@@ -13,10 +14,6 @@ import {
 } from "@/settings/validation";
 import { useProjectStore } from "@/state/projectStore";
 import { useSettingsStore } from "@/state/settingsStore";
-
-interface SettingsScreenProps {
-  onDone: () => void;
-}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -51,7 +48,7 @@ function updateSocial(
   };
 }
 
-export function SettingsScreen({ onDone }: SettingsScreenProps) {
+export function SettingsScreen() {
   const storedAppSettings = useSettingsStore((s) => s.appSettings);
   const storedArtistLogoBlob = useSettingsStore((s) => s.artistLogoBlob);
   const saveAppSettings = useSettingsStore((s) => s.save);
@@ -128,6 +125,16 @@ export function SettingsScreen({ onDone }: SettingsScreenProps) {
     if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
+  const cancel = () => {
+    setAppDraft(storedAppSettings);
+    setArtistLogoBlobDraft(undefined);
+    setProjectNameDraft(projectName);
+    setSongNameDraft(projectSongName);
+    setErrors({});
+    setSaveError(null);
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
+
   const save = async () => {
     const nextErrors = validateAppSettings(appDraft);
     setErrors(nextErrors);
@@ -136,8 +143,13 @@ export function SettingsScreen({ onDone }: SettingsScreenProps) {
 
     setSaving(true);
     try {
-      await saveAppSettings(appDraft, artistLogoBlobDraft);
-      setProjectName(projectNameDraft.trim() || "Untitled");
+      const normalizedAppDraft = normalizeAppSettings(appDraft);
+      const nextProjectName = projectNameDraft.trim() || "Untitled";
+      await saveAppSettings(normalizedAppDraft, artistLogoBlobDraft);
+      setAppDraft(normalizedAppDraft);
+      setArtistLogoBlobDraft(undefined);
+      setProjectName(nextProjectName);
+      setProjectNameDraft(nextProjectName);
       setSongName(songNameDraft);
       toast.success("Settings saved");
     } catch (error) {
@@ -158,7 +170,7 @@ export function SettingsScreen({ onDone }: SettingsScreenProps) {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onDone} disabled={saving}>
+            <Button variant="outline" onClick={cancel} disabled={saving || !dirty}>
               Cancel
             </Button>
             <Button onClick={() => void save()} disabled={saving || !dirty}>
