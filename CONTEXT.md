@@ -54,6 +54,10 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Analysis** — derived data computed offline from the primary audio in a
   worker: waveform peaks, RMS, bass/mid/high band energies, onsets, tempo
   estimate (`src/audio/analyze.ts`). Never persisted; recomputed on load.
+- **Spectral profile** — renderer-only analysis data: 64 log-spaced frequency
+  bins per analysis frame, normalized to 0..1 and sampled deterministically at
+  timeline time. Used by spectral Presets for dense geometry; not a generic
+  inspector Modulation source.
 - **Feature sampler** — deterministic function `(source, time) → 0..1`
   bridging analysis/beat grid to the renderer (`src/audio/features.ts`).
   Sources: `rms`, `bass`, `mid`, `high`, `beat` (a decaying pulse derived

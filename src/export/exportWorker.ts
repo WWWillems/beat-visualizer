@@ -8,7 +8,7 @@ import {
   Mp4OutputFormat,
   Output,
 } from "mediabunny";
-import { createFeatureSampler } from "@/audio/features";
+import { createFeatureSampler, createSpectralSampler } from "@/audio/features";
 import type { ExportWorkerInbound, ExportWorkerOutbound } from "@/export/exportTypes";
 import { RenderEngine } from "@/renderer/engine";
 import { totalFramesForDuration } from "@/timeline/time";
@@ -63,6 +63,7 @@ async function runExport(request: Extract<ExportWorkerInbound, { type: "start" }
   await output.start();
 
   const features = createFeatureSampler(analysis, project.beatGrid);
+  const spectrum = createSpectralSampler(analysis);
   const totalFrames = totalFramesForDuration(project.duration, fps);
 
   // Deterministic fixed-step rendering: frame i is always rendered at time
@@ -76,7 +77,7 @@ async function runExport(request: Extract<ExportWorkerInbound, { type: "start" }
       return;
     }
     const time = frame / fps;
-    engine.renderFrame({ project, time, features });
+    engine.renderFrame({ project, time, features, spectrum });
     await videoSource.add(time, 1 / fps);
     if (frame % 15 === 0) {
       post({ type: "progress", frame, totalFrames });

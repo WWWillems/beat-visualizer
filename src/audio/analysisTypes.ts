@@ -9,6 +9,10 @@ export interface AudioAnalysis {
   duration: number;
   /** Feature frames per second (sampleRate / hopSize). */
   featureRate: number;
+  /** Log-spaced spectral magnitudes, frames x spectralBins, normalized 0..1. */
+  spectrum: Float32Array;
+  /** Number of spectral bins per frame. */
+  spectralBins: number;
   /** Per-frame RMS energy, normalized 0..1. */
   rms: Float32Array;
   /** Per-frame band energies, normalized 0..1. */

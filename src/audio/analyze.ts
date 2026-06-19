@@ -2,6 +2,7 @@ import type { AudioAnalysis } from "@/audio/analysisTypes";
 import {
   bandEnergy,
   estimateTempo,
+  logSpectrogram,
   normalize,
   pickOnsets,
   rmsEnergy,
@@ -12,6 +13,7 @@ import {
 
 const FFT_SIZE = 2048;
 const HOP_SIZE = 512;
+const SPECTRAL_BINS = 64;
 const WAVEFORM_BUCKETS = 2048;
 
 /**
@@ -31,6 +33,8 @@ export function analyzeAudio(channelData: Float32Array, sampleRate: number): Aud
     sampleRate,
     duration,
     featureRate,
+    spectrum: logSpectrogram(frames, sampleRate, FFT_SIZE, SPECTRAL_BINS),
+    spectralBins: SPECTRAL_BINS,
     rms: normalize(rmsEnergy(channelData, frames.frameCount, HOP_SIZE, FFT_SIZE)),
     bass: normalize(bandEnergy(frames, sampleRate, FFT_SIZE, 20, 250)),
     mid: normalize(bandEnergy(frames, sampleRate, FFT_SIZE, 250, 2000)),

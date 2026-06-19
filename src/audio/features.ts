@@ -2,6 +2,9 @@ import type { AudioAnalysis } from "@/audio/analysisTypes";
 import type { FeatureSampler } from "@/model/evaluate";
 import type { BeatGrid, ModulationSource } from "@/model/types";
 
+export const SPECTRAL_BIN_COUNT = 64;
+export type SpectralSampler = (time: number, target?: Float32Array) => Float32Array;
+
 /** How long the beat pulse takes to decay back to zero, in seconds. */
 const BEAT_PULSE_DECAY = 0.3;
 /** Detected transients should feel snappier than the musical beat grid. */
@@ -80,5 +83,36 @@ export function createFeatureSampler(
         throw new Error(`Unhandled modulation source: ${String(exhaustive)}`);
       }
     }
+  };
+}
+
+export function createSpectralSampler(analysis: AudioAnalysis | null): SpectralSampler {
+  const fallback = new Float32Array(SPECTRAL_BIN_COUNT);
+
+  return (time: number, target = new Float32Array(SPECTRAL_BIN_COUNT)) => {
+    if (!analysis || analysis.spectrum.length === 0 || analysis.spectralBins <= 0 || time < 0) {
+      target.set(fallback);
+      return target;
+    }
+
+    const bins = analysis.spectralBins;
+    const frameCount = Math.floor(analysis.spectrum.length / bins);
+    if (frameCount === 0) {
+      target.set(fallback);
+      return target;
+    }
+
+    const position = time * analysis.featureRate;
+    const index = Math.floor(position);
+    const clampedIndex = Math.max(0, Math.min(frameCount - 1, index));
+    const nextIndex = Math.min(frameCount - 1, clampedIndex + 1);
+    const frac = Math.max(0, Math.min(1, position - clampedIndex));
+    for (let bin = 0; bin < SPECTRAL_BIN_COUNT; bin++) {
+      const sourceBin = Math.min(bins - 1, Math.floor((bin / SPECTRAL_BIN_COUNT) * bins));
+      const a = analysis.spectrum[clampedIndex * bins + sourceBin] ?? 0;
+      const b = analysis.spectrum[nextIndex * bins + sourceBin] ?? a;
+      target[bin] = a * (1 - frac) + b * frac;
+    }
+    return target;
   };
 }

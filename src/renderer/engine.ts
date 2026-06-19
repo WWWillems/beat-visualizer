@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { SpectralSampler } from "@/audio/features";
 import type { FeatureSampler } from "@/model/evaluate";
 import type {
   AspectRatioId,
@@ -16,6 +17,7 @@ export interface RenderFrameInput {
   /** Absolute timeline time, seconds. */
   time: number;
   features: FeatureSampler;
+  spectrum: SpectralSampler;
 }
 
 function applyBlendMode(material: THREE.MeshBasicMaterial, mode: BlendMode): void {
@@ -100,7 +102,7 @@ export class RenderEngine {
    * track order; timeline gaps stay black.
    */
   renderFrame(input: RenderFrameInput): void {
-    const { project, time, features } = input;
+    const { project, time, features, spectrum } = input;
 
     // A backwards jump means a seek: reset trails so the output for time t
     // doesn't depend on what was previously on screen. An unchanged time
@@ -118,7 +120,7 @@ export class RenderEngine {
 
     for (const track of project.tracks) {
       if (track.muted) continue;
-      const layer = this.renderTrackLayer(track, time, dt, features, isSeek, isPaused, project);
+      const layer = this.renderTrackLayer(track, time, dt, features, spectrum, isSeek, isPaused, project);
       if (layer) activeLayers.push(layer);
     }
 
@@ -148,6 +150,7 @@ export class RenderEngine {
     time: number,
     dt: number,
     features: FeatureSampler,
+    spectrum: SpectralSampler,
     isSeek: boolean,
     isPaused: boolean,
     project: Project,
@@ -169,10 +172,10 @@ export class RenderEngine {
           const warmupFrames = 8;
           for (let k = warmupFrames; k >= 0; k--) {
             const warmupTime = Math.max(clip.start, time - k * step);
-            instance.render(this.renderer, clip, warmupTime, step, features);
+            instance.render(this.renderer, clip, warmupTime, step, features, spectrum);
           }
         } else {
-          instance.render(this.renderer, clip, time, dt, features);
+          instance.render(this.renderer, clip, time, dt, features, spectrum);
         }
         return { texture: instance.texture, opacity: track.opacity, blendMode: track.blendMode };
       }

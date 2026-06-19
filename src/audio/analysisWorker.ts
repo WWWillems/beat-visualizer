@@ -12,6 +12,7 @@ self.onmessage = (event: MessageEvent<AnalysisRequest>) => {
         analysis.bass.buffer,
         analysis.mid.buffer,
         analysis.high.buffer,
+        analysis.spectrum.buffer,
         analysis.waveform.buffer,
       ],
     });

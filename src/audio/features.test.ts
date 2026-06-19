@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { AudioAnalysis } from "@/audio/analysisTypes";
-import { createFeatureSampler } from "@/audio/features";
+import { createFeatureSampler, createSpectralSampler, SPECTRAL_BIN_COUNT } from "@/audio/features";
 
 function analysis(overrides: Partial<AudioAnalysis> = {}): AudioAnalysis {
   return {
     sampleRate: 44100,
     duration: 2,
     featureRate: 10,
+    spectrum: new Float32Array(3 * SPECTRAL_BIN_COUNT),
+    spectralBins: SPECTRAL_BIN_COUNT,
     rms: new Float32Array([0, 0.5, 1]),
     bass: new Float32Array([0, 0, 0]),
     mid: new Float32Array([0, 0, 0]),
@@ -41,5 +43,16 @@ describe("createFeatureSampler", () => {
     expect(features("onset", 0.24)).toBe(0);
     expect(features("onset", 0.25)).toBeCloseTo(1);
     expect(features("onset", 0.5)).toBeLessThan(0.01);
+  });
+});
+
+describe("createSpectralSampler", () => {
+  it("samples spectral frames by interpolation", () => {
+    const spectrum = new Float32Array(3 * SPECTRAL_BIN_COUNT);
+    spectrum[SPECTRAL_BIN_COUNT + 4] = 0.5;
+    spectrum[SPECTRAL_BIN_COUNT * 2 + 4] = 1;
+    const sample = createSpectralSampler(analysis({ spectrum }))(0.15);
+
+    expect(sample[4]).toBeCloseTo(0.75);
   });
 });

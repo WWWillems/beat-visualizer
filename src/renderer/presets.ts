@@ -122,6 +122,77 @@ export const RADIAL_BURST_PARAMS: ParamDescriptor[] = [
   { key: "trail", label: "Trail", min: 0, max: 0.98, step: 0.01, defaultValue: 0.78, modulatable: false },
 ];
 
+export const SPECTRAL_SWARM_PARAMS: ParamDescriptor[] = [
+  {
+    key: "count",
+    label: "Particles",
+    min: 1000,
+    max: 150000,
+    step: 1000,
+    defaultValue: 42000,
+    modulatable: false,
+  },
+  { key: "size", label: "Size", min: 0.4, max: 7, step: 0.1, defaultValue: 1.1, modulatable: true },
+  { key: "spread", label: "Spread", min: 0.2, max: 2.4, step: 0.01, defaultValue: 1.0, modulatable: true },
+  { key: "speed", label: "Speed", min: 0, max: 3, step: 0.01, defaultValue: 0.62, modulatable: true },
+  {
+    key: "brightness",
+    label: "Brightness",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    defaultValue: 0.78,
+    modulatable: true,
+  },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.88, modulatable: false },
+  { key: "trail", label: "Trail", min: 0, max: 0.98, step: 0.01, defaultValue: 0.82, modulatable: false },
+];
+
+export const SPECTRAL_HALO_PARAMS: ParamDescriptor[] = [
+  {
+    key: "count",
+    label: "Particles",
+    min: 1000,
+    max: 140000,
+    step: 1000,
+    defaultValue: 52000,
+    modulatable: false,
+  },
+  { key: "radius", label: "Radius", min: 0.1, max: 1.5, step: 0.01, defaultValue: 0.74, modulatable: true },
+  { key: "thickness", label: "Thickness", min: 0.02, max: 0.8, step: 0.01, defaultValue: 0.26, modulatable: true },
+  { key: "spin", label: "Spin", min: -2, max: 2, step: 0.01, defaultValue: 0.24, modulatable: true },
+  { key: "burst", label: "Burst", min: 0, max: 1, step: 0.01, defaultValue: 0.38, modulatable: true },
+  { key: "size", label: "Size", min: 0.3, max: 8, step: 0.1, defaultValue: 1.0, modulatable: true },
+  {
+    key: "brightness",
+    label: "Brightness",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    defaultValue: 0.86,
+    modulatable: true,
+  },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.92, modulatable: false },
+  { key: "trail", label: "Trail", min: 0, max: 0.98, step: 0.01, defaultValue: 0.76, modulatable: false },
+];
+
+export const SPECTRAL_TERRAIN_PARAMS: ParamDescriptor[] = [
+  { key: "height", label: "Height", min: 0.05, max: 1.5, step: 0.01, defaultValue: 0.74, modulatable: true },
+  { key: "depth", label: "Depth", min: 0.3, max: 1.8, step: 0.01, defaultValue: 1.05, modulatable: true },
+  { key: "history", label: "History", min: 0.1, max: 3, step: 0.01, defaultValue: 1.4, modulatable: true },
+  { key: "contrast", label: "Contrast", min: 0.5, max: 4, step: 0.01, defaultValue: 2.2, modulatable: true },
+  {
+    key: "brightness",
+    label: "Brightness",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    defaultValue: 0.86,
+    modulatable: true,
+  },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.82, modulatable: false },
+];
+
 export const PRESETS: Record<VisualPresetId, PresetDescriptor> = {
   particleField: {
     id: "particleField",
@@ -154,6 +225,36 @@ export const PRESETS: Record<VisualPresetId, PresetDescriptor> = {
       { param: "burst", source: "beat", amount: 0.32, smoothing: 0.12 },
       { param: "burst", source: "onset", amount: 0.24, smoothing: 0.05 },
       { param: "wobble", source: "high", amount: 0.18, smoothing: 0.2 },
+    ],
+  },
+  spectralSwarm: {
+    id: "spectralSwarm",
+    label: "Spectral Swarm",
+    params: SPECTRAL_SWARM_PARAMS,
+    defaultModulations: [
+      { param: "spread", source: "bass", amount: 0.16, smoothing: 0.28 },
+      { param: "speed", source: "mid", amount: 0.18, smoothing: 0.32 },
+      { param: "brightness", source: "high", amount: 0.18, smoothing: 0.2 },
+    ],
+  },
+  spectralHalo: {
+    id: "spectralHalo",
+    label: "Spectral Halo",
+    params: SPECTRAL_HALO_PARAMS,
+    defaultModulations: [
+      { param: "radius", source: "bass", amount: 0.16, smoothing: 0.26 },
+      { param: "burst", source: "onset", amount: 0.28, smoothing: 0.06 },
+      { param: "brightness", source: "rms", amount: 0.16, smoothing: 0.22 },
+    ],
+  },
+  spectralTerrain: {
+    id: "spectralTerrain",
+    label: "Spectral Terrain",
+    params: SPECTRAL_TERRAIN_PARAMS,
+    defaultModulations: [
+      { param: "height", source: "bass", amount: 0.18, smoothing: 0.28 },
+      { param: "contrast", source: "mid", amount: 0.3, smoothing: 0.34 },
+      { param: "brightness", source: "rms", amount: 0.14, smoothing: 0.25 },
     ],
   },
 };
@@ -331,6 +432,55 @@ export const LOOKS: LookDescriptor[] = [
       { param: "burst", source: "onset", amount: 0.38, smoothing: 0.05 },
       { param: "radius", source: "bass", amount: 0.18, smoothing: 0.24 },
     ],
+  },
+  {
+    id: "spectral-swarm-portrait",
+    presetId: "spectralSwarm",
+    label: "Spectral Swarm",
+    seed: 51041,
+    params: {
+      count: 54000,
+      size: 0.9,
+      spread: 1.15,
+      speed: 0.72,
+      brightness: 0.82,
+      reactivity: 0.9,
+      trail: 0.86,
+    },
+    defaultModulations: PRESETS.spectralSwarm.defaultModulations,
+  },
+  {
+    id: "spectral-halo-core",
+    presetId: "spectralHalo",
+    label: "Spectral Halo",
+    seed: 62077,
+    params: {
+      count: 64000,
+      radius: 0.62,
+      thickness: 0.32,
+      spin: 0.28,
+      burst: 0.48,
+      size: 0.85,
+      brightness: 0.9,
+      reactivity: 0.94,
+      trail: 0.8,
+    },
+    defaultModulations: PRESETS.spectralHalo.defaultModulations,
+  },
+  {
+    id: "spectral-terrain-ridges",
+    presetId: "spectralTerrain",
+    label: "Spectral Terrain",
+    seed: 70419,
+    params: {
+      height: 0.82,
+      depth: 1.18,
+      history: 1.65,
+      contrast: 2.45,
+      brightness: 0.9,
+      reactivity: 0.86,
+    },
+    defaultModulations: PRESETS.spectralTerrain.defaultModulations,
   },
 ];
 

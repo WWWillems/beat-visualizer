@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { analyzeAudio } from "@/audio/analyze";
-import { estimateTempo, fft, pickOnsets, spectralFlux, stft, waveformPeaks } from "@/audio/dsp";
+import {
+  estimateTempo,
+  fft,
+  logSpectrogram,
+  pickOnsets,
+  spectralFlux,
+  stft,
+  waveformPeaks,
+} from "@/audio/dsp";
 
 const SAMPLE_RATE = 44100;
 
@@ -92,6 +100,7 @@ describe("analyzeAudio", () => {
     expect(a.bpm).toBe(b.bpm);
     expect(a.onsets).toEqual(b.onsets);
     expect(Array.from(a.rms)).toEqual(Array.from(b.rms));
+    expect(Array.from(a.spectrum)).toEqual(Array.from(b.spectrum));
   });
 
   it("normalizes band energies to 0..1 and reports duration", () => {
@@ -101,6 +110,17 @@ describe("analyzeAudio", () => {
     const max = Math.max(...analysis.mid);
     expect(max).toBeLessThanOrEqual(1);
     expect(max).toBeGreaterThan(0.99);
+  });
+});
+
+describe("logSpectrogram", () => {
+  it("creates normalized log-spaced spectral frames", () => {
+    const frames = stft(sine(440, 1), 2048, 512);
+    const spectrum = logSpectrogram(frames, SAMPLE_RATE, 2048, 64);
+
+    expect(spectrum.length).toBe(frames.frameCount * 64);
+    expect(Math.max(...spectrum)).toBeLessThanOrEqual(1);
+    expect(Math.max(...spectrum)).toBeGreaterThan(0.99);
   });
 });
 

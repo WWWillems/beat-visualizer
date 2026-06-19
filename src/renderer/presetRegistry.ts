@@ -1,9 +1,13 @@
 import * as THREE from "three";
+import type { SpectralSampler } from "@/audio/features";
 import type { FeatureSampler } from "@/model/evaluate";
 import type { VisualClip, VisualPresetId } from "@/model/types";
 import { FlowFieldInstance } from "@/renderer/flowField";
 import { ParticleFieldInstance } from "@/renderer/particleField";
 import { RadialBurstInstance } from "@/renderer/radialBurst";
+import { SpectralHaloInstance } from "@/renderer/spectralHalo";
+import { SpectralSwarmInstance } from "@/renderer/spectralSwarm";
+import { SpectralTerrainInstance } from "@/renderer/spectralTerrain";
 
 export interface VisualPresetInstance {
   readonly texture: THREE.Texture;
@@ -14,6 +18,7 @@ export interface VisualPresetInstance {
     timelineTime: number,
     dt: number,
     features: FeatureSampler,
+    spectrum: SpectralSampler,
   ) => void;
   reset: (renderer: THREE.WebGLRenderer) => void;
   dispose: () => void;
@@ -32,6 +37,12 @@ export function createPresetInstance(
       return new FlowFieldInstance(seed, width, height);
     case "radialBurst":
       return new RadialBurstInstance(seed, width, height);
+    case "spectralSwarm":
+      return new SpectralSwarmInstance(seed, width, height);
+    case "spectralHalo":
+      return new SpectralHaloInstance(seed, width, height);
+    case "spectralTerrain":
+      return new SpectralTerrainInstance(seed, width, height);
     default: {
       const exhaustive: never = presetId;
       throw new Error(`Unhandled visual preset: ${String(exhaustive)}`);

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { transport } from "@/audio/playback";
-import { createFeatureSampler } from "@/audio/features";
+import { createFeatureSampler, createSpectralSampler } from "@/audio/features";
 import { ASPECT_RATIOS } from "@/model/types";
 import { RenderEngine } from "@/renderer/engine";
 import { useEditorStore } from "@/state/editorStore";
@@ -64,7 +64,8 @@ export function RenderView() {
       if (renderKey !== lastRenderKey) {
         lastRenderKey = renderKey;
         const features = createFeatureSampler(editor.analysis, project.beatGrid);
-        engine.renderFrame({ project, time: renderTime, features });
+        const spectrum = createSpectralSampler(editor.analysis);
+        engine.renderFrame({ project, time: renderTime, features, spectrum });
       }
       raf = requestAnimationFrame(tick);
     };

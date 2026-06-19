@@ -78,7 +78,13 @@ export interface AudioClip extends ClipBase {
   gain: number;
 }
 
-export type VisualPresetId = "particleField" | "flowField" | "radialBurst";
+export type VisualPresetId =
+  | "particleField"
+  | "flowField"
+  | "radialBurst"
+  | "spectralSwarm"
+  | "spectralHalo"
+  | "spectralTerrain";
 
 export interface VisualClip extends ClipBase {
   type: "visual";

@@ -1,5 +1,10 @@
 import type { AudioAnalysis } from "@/audio/analysisTypes";
-import { createFeatureSampler } from "@/audio/features";
+import {
+  createFeatureSampler,
+  createSpectralSampler,
+  SPECTRAL_BIN_COUNT,
+  type SpectralSampler,
+} from "@/audio/features";
 import type { FeatureSampler } from "@/model/evaluate";
 import type { Project } from "@/model/types";
 import { ASPECT_RATIOS, SCHEMA_VERSION } from "@/model/types";
@@ -18,6 +23,17 @@ const WARMUP_FRAMES = 8;
 const syntheticLookFeatures: FeatureSampler = (source, time) => {
   const shimmer = 0.96 + 0.04 * Math.sin(time * 2.1);
   return Math.min(1, LOOK_HERO_FEATURES[source] * shimmer);
+};
+
+const syntheticLookSpectrum: SpectralSampler = (time, target = new Float32Array(SPECTRAL_BIN_COUNT)) => {
+  for (let i = 0; i < SPECTRAL_BIN_COUNT; i++) {
+    const x = i / Math.max(1, SPECTRAL_BIN_COUNT - 1);
+    const bassPeak = Math.exp(-((x - 0.16) ** 2) / 0.012);
+    const midPeak = Math.exp(-((x - 0.48) ** 2) / 0.035);
+    const highRipple = 0.5 + 0.5 * Math.sin(i * 0.72 + time * 4.1);
+    target[i] = Math.min(1, bassPeak * 0.78 + midPeak * 0.62 + highRipple * x * 0.34);
+  }
+  return target;
 };
 
 /**
@@ -42,10 +58,11 @@ export async function renderProjectThumbnail(
     }
 
     const features = createFeatureSampler(analysis, project.beatGrid);
+    const spectrum = createSpectralSampler(analysis);
     const time = project.duration * 0.25;
     const step = 1 / project.fps;
     for (let k = WARMUP_FRAMES; k >= 0; k--) {
-      engine.renderFrame({ project, time: Math.max(0, time - k * step), features });
+      engine.renderFrame({ project, time: Math.max(0, time - k * step), features, spectrum });
     }
 
     return await canvas.convertToBlob({ type: "image/png" });
@@ -122,6 +139,7 @@ export async function renderLookThumbnail(look: LookDescriptor): Promise<Blob | 
         project,
         time: Math.max(0, LOOK_THUMBNAIL_TIME - k * step),
         features: syntheticLookFeatures,
+        spectrum: syntheticLookSpectrum,
       });
     }
     return await canvas.convertToBlob({ type: "image/png" });

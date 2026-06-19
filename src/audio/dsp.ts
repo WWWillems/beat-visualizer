@@ -125,6 +125,46 @@ export function bandEnergy(
   return out;
 }
 
+/**
+ * Downsamples linear FFT bins into log-spaced frequency bands for renderer
+ * geometry. The flattened output is frames x outputBins.
+ */
+export function logSpectrogram(
+  frames: StftFrames,
+  sampleRate: number,
+  fftSize: number,
+  outputBins: number,
+  lowHz = 40,
+  highHz = 12000,
+): Float32Array {
+  const out = new Float32Array(frames.frameCount * outputBins);
+  const hzPerBin = sampleRate / fftSize;
+  const minHz = Math.max(lowHz, hzPerBin);
+  const maxHz = Math.min(highHz, sampleRate / 2);
+  const logMin = Math.log(minHz);
+  const logMax = Math.log(maxHz);
+
+  for (let frame = 0; frame < frames.frameCount; frame++) {
+    const frameBase = frame * frames.binCount;
+    const outBase = frame * outputBins;
+    for (let band = 0; band < outputBins; band++) {
+      const fromT = band / outputBins;
+      const toT = (band + 1) / outputBins;
+      const fromHz = Math.exp(logMin + (logMax - logMin) * fromT);
+      const toHz = Math.exp(logMin + (logMax - logMin) * toT);
+      const fromBin = Math.max(1, Math.floor(fromHz / hzPerBin));
+      const toBin = Math.min(frames.binCount - 1, Math.max(fromBin, Math.ceil(toHz / hzPerBin)));
+      let sum = 0;
+      for (let bin = fromBin; bin <= toBin; bin++) {
+        sum += frames.magnitudes[frameBase + bin];
+      }
+      out[outBase + band] = sum / (toBin - fromBin + 1);
+    }
+  }
+
+  return normalize(out);
+}
+
 /** Half-wave-rectified spectral flux per frame. */
 export function spectralFlux(frames: StftFrames): Float32Array {
   const flux = new Float32Array(frames.frameCount);
