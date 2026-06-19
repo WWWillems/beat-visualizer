@@ -1,31 +1,23 @@
 import type { AudioAnalysis } from "@/audio/analysisTypes";
 import { createFeatureSampler } from "@/audio/features";
 import type { FeatureSampler } from "@/model/evaluate";
-import type { ModulationSource, Project } from "@/model/types";
+import type { Project } from "@/model/types";
 import { ASPECT_RATIOS, SCHEMA_VERSION } from "@/model/types";
 import { RenderEngine } from "@/renderer/engine";
 import type { LookDescriptor } from "@/renderer/presets";
+import { LOOK_HERO_FEATURES } from "@/renderer/renderDynamics";
 import { listImageBitmaps } from "@/state/mediaCache";
 import { saveThumbnail } from "@/storage/db";
 
 const THUMBNAIL_WIDTH = 480;
 const LOOK_THUMBNAIL_SIZE = 192;
-const LOOK_THUMBNAIL_TIME = 2.4;
+const LOOK_THUMBNAIL_TIME = 1.8;
 /** Short fixed-step run-up so trails look representative in the still. */
 const WARMUP_FRAMES = 8;
 
-const LOOK_FEATURES: Record<ModulationSource, number> = {
-  rms: 0.58,
-  bass: 0.72,
-  mid: 0.45,
-  high: 0.38,
-  beat: 0.82,
-  onset: 0.64,
-};
-
 const syntheticLookFeatures: FeatureSampler = (source, time) => {
-  const pulse = 0.5 + 0.5 * Math.sin(time * 2.1);
-  return Math.min(1, LOOK_FEATURES[source] * (0.78 + pulse * 0.22));
+  const shimmer = 0.96 + 0.04 * Math.sin(time * 2.1);
+  return Math.min(1, LOOK_HERO_FEATURES[source] * shimmer);
 };
 
 /**

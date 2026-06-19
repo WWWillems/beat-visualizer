@@ -2,8 +2,8 @@ import * as THREE from "three";
 import type { FeatureSampler } from "@/model/evaluate";
 import { evaluateParam } from "@/model/evaluate";
 import type { VisualClip } from "@/model/types";
-import { particleAudioGates, particleVisualEnergy } from "@/renderer/particleField";
 import { paramDescriptor } from "@/renderer/presets";
+import { DEPTH_FADE_GLSL, configureDepthCamera, radialFamilyGates } from "@/renderer/renderDynamics";
 import { createRng } from "@/renderer/rng";
 
 const VERTEX_SHADER = /* glsl */ `
@@ -16,32 +16,41 @@ uniform float uWobble;
 uniform float uBurst;
 uniform float uSize;
 uniform float uPixelRatio;
+uniform float uDepth;
+uniform float uFine;
 
 attribute vec4 aSeed;
 
 varying float vAlpha;
+varying float vDepth;
+
+${DEPTH_FADE_GLSL}
 
 void main() {
   float rays = max(1.0, uRays);
   float ray = floor(aSeed.x * rays);
-  float rayJitter = (aSeed.y - 0.5) * uSpread;
+  float rayJitter = (aSeed.y - 0.5) * uSpread * (1.0 + uFine * 0.8);
   float angle = (ray + rayJitter) / rays * 6.28318530718;
   angle += uTime * uSpin + sin(uTime * 0.9 + aSeed.z * 12.0) * uWobble * 0.25;
 
   float radialNoise = pow(aSeed.z, 0.55);
+  float ringBias = smoothstep(0.24, 0.78, uSpread);
+  float rayRadius = uRadius * (0.16 + radialNoise * 1.0);
+  float ringRadius = uRadius * (0.84 + (aSeed.z - 0.5) * uSpread * 0.42);
   float pulse = sin(uTime * 2.0 + aSeed.w * 6.28318530718) * 0.08 * uWobble;
-  float radius = uRadius * (0.2 + radialNoise * 0.9) + uBurst * (0.15 + aSeed.w * 0.45) + pulse;
+  float radius = mix(rayRadius, ringRadius, ringBias) + uBurst * (0.18 + aSeed.w * 0.55) + pulse;
   float thickness = (aSeed.y - 0.5) * uSpread * 0.65;
 
   vec2 dir = vec2(cos(angle), sin(angle));
   vec2 normal = vec2(-dir.y, dir.x);
   vec2 xy = dir * radius + normal * thickness;
-  vec3 pos = vec3(xy, (aSeed.w - 0.5) * 0.25);
+  vec3 pos = vec3(xy, (radialNoise - 0.5) * uDepth * 1.45 + cos(angle * 2.0 + uTime) * uDepth * 0.12);
 
   vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
   gl_Position = projectionMatrix * mvPosition;
   gl_PointSize = uSize * uPixelRatio * (2.2 / max(0.1, -mvPosition.z));
-  vAlpha = 0.28 + 0.72 * (1.0 - radialNoise);
+  vAlpha = (0.28 + 0.72 * (1.0 - radialNoise)) * (0.72 + ringBias * 0.28);
+  vDepth = depthFade(pos.z, uDepth);
 }
 `;
 
@@ -49,13 +58,14 @@ const FRAGMENT_SHADER = /* glsl */ `
 uniform float uBrightness;
 uniform float uEnergy;
 varying float vAlpha;
+varying float vDepth;
 
 void main() {
   vec2 uv = gl_PointCoord - 0.5;
   float d = length(uv);
   if (d > 0.5) discard;
   float falloff = smoothstep(0.5, 0.0, d);
-  float a = falloff * vAlpha * uBrightness * uBrightness * uEnergy;
+  float a = falloff * vAlpha * vDepth * uBrightness * uBrightness * uEnergy;
   gl_FragColor = vec4(vec3(1.0), a);
 }
 `;
@@ -112,6 +122,8 @@ export class RadialBurstInstance {
         uBrightness: { value: 0.8 },
         uEnergy: { value: 1 },
         uPixelRatio: { value: 1 },
+        uDepth: { value: 0.55 },
+        uFine: { value: 0.2 },
       },
       transparent: true,
       depthWrite: false,
@@ -157,8 +169,7 @@ export class RadialBurstInstance {
   }
 
   setSize(width: number, height: number): void {
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+    configureDepthCamera(this.camera, width / height, 0, 0.45, 0);
     this.targetA.setSize(width, height);
     this.targetB.setSize(width, height);
   }
@@ -202,21 +213,21 @@ export class RadialBurstInstance {
     if (count !== this.currentCount) this.rebuildGeometry(count);
 
     const clipTime = timelineTime - clip.start;
-    const gates = particleAudioGates(
-      particleVisualEnergy(features, timelineTime),
-      resolveParam(clip, "reactivity", timelineTime, features),
-    );
+    const gates = radialFamilyGates(features, timelineTime, resolveParam(clip, "reactivity", timelineTime, features));
+    configureDepthCamera(this.camera, this.targetA.width / this.targetA.height, clipTime, gates.depth, 0.07);
     this.material.uniforms.uTime.value = clipTime;
     this.material.uniforms.uRays.value = resolveParam(clip, "rays", timelineTime, features);
-    this.material.uniforms.uRadius.value = resolveParam(clip, "radius", timelineTime, features);
+    this.material.uniforms.uRadius.value = resolveParam(clip, "radius", timelineTime, features) * (0.94 + gates.motion * 0.18);
     this.material.uniforms.uSpread.value = resolveParam(clip, "spread", timelineTime, features);
-    this.material.uniforms.uSpin.value = resolveParam(clip, "spin", timelineTime, features) * gates.motion;
-    this.material.uniforms.uWobble.value = resolveParam(clip, "wobble", timelineTime, features) * gates.motion;
-    this.material.uniforms.uBurst.value = resolveParam(clip, "burst", timelineTime, features) * gates.motion;
+    this.material.uniforms.uSpin.value = resolveParam(clip, "spin", timelineTime, features) * (0.75 + gates.motion * 0.6);
+    this.material.uniforms.uWobble.value = resolveParam(clip, "wobble", timelineTime, features) * (0.8 + gates.fine * 0.5);
+    this.material.uniforms.uBurst.value = (resolveParam(clip, "burst", timelineTime, features) + gates.accent * 0.22) * gates.motion;
     this.material.uniforms.uSize.value = resolveParam(clip, "size", timelineTime, features);
     this.material.uniforms.uBrightness.value =
-      resolveParam(clip, "brightness", timelineTime, features) * gates.brightness;
+      resolveParam(clip, "brightness", timelineTime, features) * gates.brightness * (1 + gates.accent * 0.2);
     this.material.uniforms.uPixelRatio.value = this.targetA.height / 540;
+    this.material.uniforms.uDepth.value = gates.depth;
+    this.material.uniforms.uFine.value = gates.fine;
 
     const trail = resolveParam(clip, "trail", timelineTime, features);
     const decay = trail <= 0 ? 0 : Math.exp(Math.log(trail) * dt * 30);

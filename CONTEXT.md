@@ -60,8 +60,9 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
   modulation, clamped to the parameter range (`src/model/evaluate.ts`).
 - **Preset** — a parameterized procedural visual instrument with its own
   renderer/control surface, described by `ParamDescriptor`s so the inspector
-  renders generically (`src/renderer/presets.ts`). First preset:
-  `particleField`.
+  renders generically (`src/renderer/presets.ts`). In the Look chooser, a
+  Preset is also the user-visible family/category: each family should own a
+  distinct visual grammar that remains recognizable at a glance.
 - **Look** — a curated starting point belonging to exactly one Preset:
   params, default modulations, and seed values presented as selectable visual
   thumbnails; selecting one stamps concrete values onto a Visual Clip rather

@@ -2,8 +2,8 @@ import * as THREE from "three";
 import type { FeatureSampler } from "@/model/evaluate";
 import { evaluateParam } from "@/model/evaluate";
 import type { VisualClip } from "@/model/types";
-import { particleAudioGates, particleVisualEnergy } from "@/renderer/particleField";
 import { paramDescriptor } from "@/renderer/presets";
+import { DEPTH_FADE_GLSL, configureDepthCamera, flowFamilyGates } from "@/renderer/renderDynamics";
 import { createRng } from "@/renderer/rng";
 
 const VERTEX_SHADER = /* glsl */ `
@@ -14,33 +14,43 @@ uniform float uCurl;
 uniform float uLength;
 uniform float uSize;
 uniform float uPixelRatio;
+uniform float uDepth;
+uniform float uFine;
 
 attribute vec4 aSeed;
 
 varying float vAlpha;
+varying float vDepth;
+
+${DEPTH_FADE_GLSL}
 
 void main() {
-  float baseX = (aSeed.x * 2.0 - 1.0) * uSpread;
-  float baseY = (aSeed.y * 2.0 - 1.0) * uSpread * 0.72;
-  float strand = floor(aSeed.z * 18.0);
+  float strandCount = 7.0 + floor(uCurl * 7.0);
+  float strand = floor(aSeed.z * strandCount);
+  float strandNorm = strand / max(1.0, strandCount - 1.0);
+  float baseX = (aSeed.x * 2.0 - 1.0) * uSpread * 1.2;
+  float localY = aSeed.y - 0.5;
+  float baseY = (strandNorm * 2.0 - 1.0) * uSpread * 0.72 + localY * uSpread * 0.16;
   float phase = strand * 0.73 + aSeed.w * 6.28318530718;
   float t = uTime * uSpeed + phase;
 
   float waveA = sin(baseX * (2.0 + uCurl * 6.0) + t);
   float waveB = sin((baseX + baseY) * (1.5 + uCurl * 5.0) - t * 0.77);
   float flow = (waveA * 0.65 + waveB * 0.35) * uCurl;
-  float ribbon = (aSeed.z - 0.5) * uLength * 1.4;
+  float ribbon = localY * uLength * 1.35;
+  float grain = sin(t * 2.7 + aSeed.x * 41.0) * uFine * 0.08;
 
   vec3 pos = vec3(
-    baseX + ribbon * cos(flow + phase),
-    baseY + flow * 0.35 + ribbon * sin(flow + phase),
-    (aSeed.w - 0.5) * 0.25
+    baseX + ribbon * cos(flow + phase) * 0.34,
+    baseY + flow * 0.32 + ribbon * sin(flow + phase) * 0.7 + grain,
+    (strandNorm - 0.5) * uDepth * 1.2 + sin(baseX * 1.8 + t) * uDepth * 0.18
   );
 
   vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
   gl_Position = projectionMatrix * mvPosition;
   gl_PointSize = uSize * uPixelRatio * (2.2 / max(0.1, -mvPosition.z));
-  vAlpha = 0.2 + 0.8 * smoothstep(0.0, 1.0, aSeed.w);
+  vAlpha = (0.16 + 0.84 * smoothstep(0.5, 0.0, abs(localY))) * (0.45 + 0.55 * aSeed.w);
+  vDepth = depthFade(pos.z, uDepth);
 }
 `;
 
@@ -48,13 +58,14 @@ const FRAGMENT_SHADER = /* glsl */ `
 uniform float uBrightness;
 uniform float uEnergy;
 varying float vAlpha;
+varying float vDepth;
 
 void main() {
   vec2 uv = gl_PointCoord - 0.5;
   float d = length(uv);
   if (d > 0.5) discard;
   float falloff = smoothstep(0.5, 0.0, d);
-  float a = falloff * vAlpha * uBrightness * uBrightness * uEnergy;
+  float a = falloff * vAlpha * vDepth * uBrightness * uBrightness * uEnergy;
   gl_FragColor = vec4(vec3(1.0), a);
 }
 `;
@@ -109,6 +120,8 @@ export class FlowFieldInstance {
         uBrightness: { value: 0.7 },
         uEnergy: { value: 1 },
         uPixelRatio: { value: 1 },
+        uDepth: { value: 0.45 },
+        uFine: { value: 0.25 },
       },
       transparent: true,
       depthWrite: false,
@@ -154,8 +167,7 @@ export class FlowFieldInstance {
   }
 
   setSize(width: number, height: number): void {
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+    configureDepthCamera(this.camera, width / height, 0, 0.35, 0);
     this.targetA.setSize(width, height);
     this.targetB.setSize(width, height);
   }
@@ -199,19 +211,19 @@ export class FlowFieldInstance {
     if (count !== this.currentCount) this.rebuildGeometry(count);
 
     const clipTime = timelineTime - clip.start;
-    const gates = particleAudioGates(
-      particleVisualEnergy(features, timelineTime),
-      resolveParam(clip, "reactivity", timelineTime, features),
-    );
+    const gates = flowFamilyGates(features, timelineTime, resolveParam(clip, "reactivity", timelineTime, features));
+    configureDepthCamera(this.camera, this.targetA.width / this.targetA.height, clipTime, gates.depth, 0.05);
     this.material.uniforms.uTime.value = clipTime;
     this.material.uniforms.uSpread.value = resolveParam(clip, "spread", timelineTime, features);
-    this.material.uniforms.uSpeed.value = resolveParam(clip, "speed", timelineTime, features) * gates.motion;
-    this.material.uniforms.uCurl.value = resolveParam(clip, "curl", timelineTime, features) * gates.motion;
-    this.material.uniforms.uLength.value = resolveParam(clip, "length", timelineTime, features);
+    this.material.uniforms.uSpeed.value = resolveParam(clip, "speed", timelineTime, features) * (0.75 + gates.motion * 0.55);
+    this.material.uniforms.uCurl.value = resolveParam(clip, "curl", timelineTime, features) * (0.82 + gates.accent * 0.4);
+    this.material.uniforms.uLength.value = resolveParam(clip, "length", timelineTime, features) * (0.85 + gates.motion * 0.35);
     this.material.uniforms.uSize.value = resolveParam(clip, "size", timelineTime, features);
     this.material.uniforms.uBrightness.value =
-      resolveParam(clip, "brightness", timelineTime, features) * gates.brightness;
+      resolveParam(clip, "brightness", timelineTime, features) * gates.brightness * (1 + gates.fine * 0.18);
     this.material.uniforms.uPixelRatio.value = this.targetA.height / 540;
+    this.material.uniforms.uDepth.value = gates.depth;
+    this.material.uniforms.uFine.value = gates.fine;
 
     const trail = resolveParam(clip, "trail", timelineTime, features);
     const decay = trail <= 0 ? 0 : Math.exp(Math.log(trail) * dt * 30);

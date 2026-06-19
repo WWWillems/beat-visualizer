@@ -3,6 +3,13 @@ import type { FeatureSampler } from "@/model/evaluate";
 import type { VisualClip } from "@/model/types";
 import { evaluateParam } from "@/model/evaluate";
 import { paramDescriptor } from "@/renderer/presets";
+import {
+  DEPTH_FADE_GLSL,
+  configureDepthCamera,
+  particleFamilyGates,
+  particleVisualEnergy,
+  reactiveGates,
+} from "@/renderer/renderDynamics";
 import { createRng } from "@/renderer/rng";
 
 const VERTEX_SHADER = /* glsl */ `
@@ -13,16 +20,21 @@ uniform float uTurbulence;
 uniform float uBurst;
 uniform float uSize;
 uniform float uPixelRatio;
+uniform float uDepth;
 
 attribute vec4 aSeed; // x: radius, y: theta, z: phi, w: rate
 
 varying float vAlpha;
+varying float vDepth;
+
+${DEPTH_FADE_GLSL}
 
 void main() {
-  float radius = uSpread * (0.25 + 0.75 * aSeed.x);
+  float radius = uSpread * (0.16 + 0.84 * pow(aSeed.x, 1.35));
   float theta = aSeed.y * 6.28318530718;
   float phi = acos(2.0 * aSeed.z - 1.0);
   float rate = 0.2 + aSeed.w * 0.8;
+  float depthOrbit = uTime * uSpeed * (0.1 + rate * 0.25);
 
   // Stateless orbital motion: position is a pure function of time.
   float angle = theta + uTime * uSpeed * rate;
@@ -31,6 +43,8 @@ void main() {
     radius * cos(phi),
     radius * sin(phi) * sin(angle)
   );
+  pos.xz = mat2(cos(depthOrbit), -sin(depthOrbit), sin(depthOrbit), cos(depthOrbit)) * pos.xz;
+  pos.z *= 1.0 + uDepth * 1.25;
 
   // Turbulent drift, also pure in time.
   float t = uTime * (0.6 + rate);
@@ -49,6 +63,7 @@ void main() {
   // same proportionally; 2.2 normalizes for the default camera distance.
   gl_PointSize = uSize * uPixelRatio * (2.2 / max(0.1, -mvPosition.z));
   vAlpha = 0.35 + 0.65 * aSeed.w;
+  vDepth = depthFade(pos.z, uDepth);
 }
 `;
 
@@ -56,6 +71,7 @@ const FRAGMENT_SHADER = /* glsl */ `
 uniform float uBrightness;
 uniform float uEnergy;
 varying float vAlpha;
+varying float vDepth;
 
 void main() {
   vec2 uv = gl_PointCoord - 0.5;
@@ -63,39 +79,20 @@ void main() {
   if (d > 0.5) discard;
   float falloff = smoothstep(0.5, 0.0, d);
   // Quadratic brightness response gives usable range before clipping.
-  float a = falloff * vAlpha * uBrightness * uBrightness * uEnergy;
+  float a = falloff * vAlpha * vDepth * uBrightness * uBrightness * uEnergy;
   gl_FragColor = vec4(vec3(1.0), a);
 }
 `;
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
-}
 
 export interface ParticleAudioGates {
   motion: number;
   brightness: number;
 }
 
-export function particleVisualEnergy(features: FeatureSampler, time: number): number {
-  const rms = features("rms", time);
-  const bass = features("bass", time);
-  const onset = features("onset", time);
-  const energy = rms * 0.75 + bass * 0.2 + onset * 0.35;
-  return clamp01(1 - (1 - clamp01(energy)) ** 2);
-}
+export { particleVisualEnergy };
 
 export function particleAudioGates(visualEnergy: number, reactivity: number): ParticleAudioGates {
-  const r = clamp01(reactivity);
-  const calmness = (1 - r) ** 2;
-  const motionFloor = 0.05 + calmness * 0.95;
-  const brightnessFloor = 0.18 + calmness * 0.82;
-  const energy = clamp01(visualEnergy);
-
-  return {
-    motion: motionFloor + (1 - motionFloor) * energy,
-    brightness: brightnessFloor + (1 - brightnessFloor) * energy,
-  };
+  return reactiveGates(visualEnergy, reactivity);
 }
 
 /**
@@ -135,6 +132,7 @@ export class ParticleFieldInstance {
         uBrightness: { value: 0.8 },
         uEnergy: { value: 1 },
         uPixelRatio: { value: 1 },
+        uDepth: { value: 0.5 },
       },
       transparent: true,
       depthWrite: false,
@@ -181,8 +179,7 @@ export class ParticleFieldInstance {
   }
 
   setSize(width: number, height: number): void {
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
+    configureDepthCamera(this.camera, width / height, 0, 0.4, 0);
     this.targetA.setSize(width, height);
     this.targetB.setSize(width, height);
   }
@@ -247,17 +244,19 @@ export class ParticleFieldInstance {
 
     const clipTime = timelineTime - clip.start;
     const reactivity = resolve("reactivity");
-    const gates = particleAudioGates(particleVisualEnergy(features, timelineTime), reactivity);
+    const gates = particleFamilyGates(features, timelineTime, reactivity);
+    configureDepthCamera(this.camera, this.targetA.width / this.targetA.height, clipTime, gates.depth, 0.08);
     this.material.uniforms.uTime.value = clipTime;
     this.material.uniforms.uSpread.value = resolve("spread");
     this.material.uniforms.uSpeed.value = resolve("speed") * gates.motion;
     this.material.uniforms.uTurbulence.value = resolve("turbulence") * gates.motion;
-    this.material.uniforms.uBurst.value = resolve("burst") * gates.motion;
+    this.material.uniforms.uBurst.value = (resolve("burst") + gates.accent * 0.18) * gates.motion;
     this.material.uniforms.uSize.value = resolve("size");
-    this.material.uniforms.uBrightness.value = resolve("brightness") * gates.brightness;
+    this.material.uniforms.uBrightness.value = resolve("brightness") * gates.brightness * (1 + gates.fine * 0.2);
     // Scale point size with vertical resolution so 1080p export matches the
     // smaller preview canvas proportionally.
     this.material.uniforms.uPixelRatio.value = this.targetA.height / 540;
+    this.material.uniforms.uDepth.value = gates.depth;
 
     const trail = resolve("trail");
     // Normalize decay so trails look the same at any frame rate: `trail` is

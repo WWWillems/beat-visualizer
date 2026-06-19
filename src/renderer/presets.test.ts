@@ -16,11 +16,11 @@ describe("particle field preset", () => {
 });
 
 describe("look library", () => {
-  it("defines four looks for each preset", () => {
+  it("keeps a reduced set of curated looks across all preset families", () => {
     expect(Object.keys(PRESETS)).toEqual(["particleField", "flowField", "radialBurst"]);
-    expect(LOOKS).toHaveLength(12);
-    expect(looksForPreset("particleField")).toHaveLength(4);
-    expect(looksForPreset("flowField")).toHaveLength(4);
+    expect(LOOKS).toHaveLength(8);
+    expect(looksForPreset("particleField")).toHaveLength(2);
+    expect(looksForPreset("flowField")).toHaveLength(2);
     expect(looksForPreset("radialBurst")).toHaveLength(4);
   });
 
