@@ -68,6 +68,36 @@ void main() {
 }
 `;
 
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+export interface ParticleAudioGates {
+  motion: number;
+  brightness: number;
+}
+
+export function particleVisualEnergy(features: FeatureSampler, time: number): number {
+  const rms = features("rms", time);
+  const bass = features("bass", time);
+  const onset = features("onset", time);
+  const energy = rms * 0.75 + bass * 0.2 + onset * 0.35;
+  return clamp01(1 - (1 - clamp01(energy)) ** 2);
+}
+
+export function particleAudioGates(visualEnergy: number, reactivity: number): ParticleAudioGates {
+  const r = clamp01(reactivity);
+  const calmness = (1 - r) ** 2;
+  const motionFloor = 0.05 + calmness * 0.95;
+  const brightnessFloor = 0.18 + calmness * 0.82;
+  const energy = clamp01(visualEnergy);
+
+  return {
+    motion: motionFloor + (1 - motionFloor) * energy,
+    brightness: brightnessFloor + (1 - brightnessFloor) * energy,
+  };
+}
+
 /**
  * One particle-field instance per visual clip. Motion is a pure function of
  * (seed, time) in the vertex shader; only the trail accumulation buffer
@@ -216,13 +246,15 @@ export class ParticleFieldInstance {
     if (count !== this.currentCount) this.rebuildGeometry(count);
 
     const clipTime = timelineTime - clip.start;
+    const reactivity = resolve("reactivity");
+    const gates = particleAudioGates(particleVisualEnergy(features, timelineTime), reactivity);
     this.material.uniforms.uTime.value = clipTime;
     this.material.uniforms.uSpread.value = resolve("spread");
-    this.material.uniforms.uSpeed.value = resolve("speed");
-    this.material.uniforms.uTurbulence.value = resolve("turbulence");
-    this.material.uniforms.uBurst.value = resolve("burst");
+    this.material.uniforms.uSpeed.value = resolve("speed") * gates.motion;
+    this.material.uniforms.uTurbulence.value = resolve("turbulence") * gates.motion;
+    this.material.uniforms.uBurst.value = resolve("burst") * gates.motion;
     this.material.uniforms.uSize.value = resolve("size");
-    this.material.uniforms.uBrightness.value = resolve("brightness");
+    this.material.uniforms.uBrightness.value = resolve("brightness") * gates.brightness;
     // Scale point size with vertical resolution so 1080p export matches the
     // smaller preview canvas proportionally.
     this.material.uniforms.uPixelRatio.value = this.targetA.height / 540;

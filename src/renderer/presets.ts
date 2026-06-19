@@ -51,6 +51,7 @@ export const PARTICLE_FIELD_PARAMS: ParamDescriptor[] = [
     defaultValue: 0.8,
     modulatable: true,
   },
+  { key: "reactivity", label: "Reactivity", min: 0, max: 1, step: 0.01, defaultValue: 0.8, modulatable: false },
   { key: "trail", label: "Trail", min: 0, max: 0.98, step: 0.01, defaultValue: 0.75, modulatable: false },
 ];
 
