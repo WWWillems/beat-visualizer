@@ -15,7 +15,7 @@ describe("projectStore", () => {
 
   it("adds, moves, and deletes clips", () => {
     const trackId = visualTrackId();
-    const clip = createVisualClip(0, 5, {});
+    const clip = createVisualClip(0, 5);
     const store = useProjectStore.getState();
 
     store.addClip(trackId, clip);
@@ -49,7 +49,7 @@ describe("projectStore", () => {
 
   it("supports undo and redo of clip edits", () => {
     const trackId = visualTrackId();
-    const clip = createVisualClip(0, 5, {});
+    const clip = createVisualClip(0, 5);
     useProjectStore.getState().addClip(trackId, clip);
     useProjectStore.getState().moveClip(trackId, clip.id, 10);
 
@@ -69,7 +69,7 @@ describe("projectStore", () => {
 
   it("updates clip timing with a minimum duration", () => {
     const trackId = visualTrackId();
-    const clip = createVisualClip(0, 5, {});
+    const clip = createVisualClip(0, 5);
 
     useProjectStore.getState().addClip(trackId, clip);
     useProjectStore.getState().setClipTiming(trackId, clip.id, 2, 4);
@@ -87,8 +87,8 @@ describe("projectStore", () => {
   it("commits an overwrite edit that slices same-track siblings", () => {
     const trackId = visualTrackId();
     const store = useProjectStore.getState();
-    const long = createVisualClip(0, 12, {});
-    const moved = createVisualClip(20, 4, {});
+    const long = createVisualClip(0, 12);
+    const moved = createVisualClip(20, 4);
     store.addClip(trackId, long);
     store.addClip(trackId, moved);
 
@@ -112,8 +112,8 @@ describe("projectStore", () => {
   it("commits a plain edit without slicing when overwrite is off", () => {
     const trackId = visualTrackId();
     const store = useProjectStore.getState();
-    const a = createVisualClip(0, 6, {});
-    const b = createVisualClip(8, 4, {});
+    const a = createVisualClip(0, 6);
+    const b = createVisualClip(8, 4);
     store.addClip(trackId, a);
     store.addClip(trackId, b);
 
@@ -127,7 +127,7 @@ describe("projectStore", () => {
 
   it("clears undo history when loading a project", () => {
     const trackId = visualTrackId();
-    useProjectStore.getState().addClip(trackId, createVisualClip(0, 5, {}));
+    useProjectStore.getState().addClip(trackId, createVisualClip(0, 5));
     useProjectStore.getState().loadProject(createEmptyProject("Fresh"));
     undo();
     expect(useProjectStore.getState().project.name).toBe("Fresh");

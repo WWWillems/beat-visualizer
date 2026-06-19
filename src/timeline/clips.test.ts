@@ -12,7 +12,7 @@ import {
 const MIN = 1 / 30;
 
 function visual(start: number, duration: number): VisualClip {
-  return createVisualClip(start, duration, {});
+  return createVisualClip(start, duration);
 }
 
 describe("clampMoveStart (hard collision)", () => {

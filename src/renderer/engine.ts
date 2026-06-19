@@ -52,7 +52,10 @@ export class RenderEngine {
   private readonly compositeScene = new THREE.Scene();
   private readonly compositeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
   private readonly layerMeshes: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
-  private readonly visualInstances = new Map<string, VisualPresetInstance>();
+  private readonly visualInstances = new Map<
+    string,
+    { presetId: VisualClip["presetId"]; seed: number; instance: VisualPresetInstance }
+  >();
   private readonly imageTextures = new Map<string, THREE.Texture>();
   private width: number;
   private height: number;
@@ -78,8 +81,8 @@ export class RenderEngine {
     this.width = width;
     this.height = height;
     this.renderer.setSize(width, height, false);
-    for (const instance of this.visualInstances.values()) {
-      instance.setSize(width, height);
+    for (const entry of this.visualInstances.values()) {
+      entry.instance.setSize(width, height);
     }
   }
 
@@ -195,10 +198,13 @@ export class RenderEngine {
   }
 
   private ensureVisualInstance(clip: VisualClip): VisualPresetInstance {
-    let instance = this.visualInstances.get(clip.id);
-    if (instance) return instance;
-    instance = createPresetInstance(clip.presetId, clip.seed, this.width, this.height);
-    this.visualInstances.set(clip.id, instance);
+    const cached = this.visualInstances.get(clip.id);
+    if (cached && cached.presetId === clip.presetId && cached.seed === clip.seed) {
+      return cached.instance;
+    }
+    cached?.instance.dispose();
+    const instance = createPresetInstance(clip.presetId, clip.seed, this.width, this.height);
+    this.visualInstances.set(clip.id, { presetId: clip.presetId, seed: clip.seed, instance });
     return instance;
   }
 
@@ -208,9 +214,9 @@ export class RenderEngine {
       if (track.type !== "visual") continue;
       for (const clip of track.clips) liveClipIds.add(clip.id);
     }
-    for (const [clipId, instance] of this.visualInstances) {
+    for (const [clipId, entry] of this.visualInstances) {
       if (!liveClipIds.has(clipId)) {
-        instance.dispose();
+        entry.instance.dispose();
         this.visualInstances.delete(clipId);
       }
     }
@@ -282,13 +288,13 @@ export class RenderEngine {
   /** Resets temporal state (trails); call before deterministic export runs. */
   resetTemporalState(): void {
     this.lastTime = null;
-    for (const instance of this.visualInstances.values()) {
-      instance.reset(this.renderer);
+    for (const entry of this.visualInstances.values()) {
+      entry.instance.reset(this.renderer);
     }
   }
 
   dispose(): void {
-    for (const instance of this.visualInstances.values()) instance.dispose();
+    for (const entry of this.visualInstances.values()) entry.instance.dispose();
     this.visualInstances.clear();
     for (const texture of this.imageTextures.values()) texture.dispose();
     this.imageTextures.clear();

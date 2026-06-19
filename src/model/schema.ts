@@ -15,6 +15,10 @@ const migrations: Record<number, (doc: Record<string, unknown>) => Record<string
     ...doc,
     schemaVersion: 3,
   }),
+  3: (doc) => ({
+    ...doc,
+    schemaVersion: 4,
+  }),
 };
 
 export class UnsupportedSchemaError extends Error {

@@ -56,9 +56,18 @@ The vocabulary of this codebase. Use these terms; don't invent parallel ones.
 - **Modulation** — a mapping on a visual clip: feature source → preset
   parameter, with amount and smoothing. Final value = keyframed base +
   modulation, clamped to the parameter range (`src/model/evaluate.ts`).
-- **Preset** — a parameterized procedural visual ("instrument"), described by
-  `ParamDescriptor`s so the inspector renders generically
-  (`src/renderer/presets.ts`). First preset: `particleField`.
+- **Preset** — a parameterized procedural visual instrument with its own
+  renderer/control surface, described by `ParamDescriptor`s so the inspector
+  renders generically (`src/renderer/presets.ts`). First preset:
+  `particleField`.
+- **Look** — a curated starting point belonging to exactly one Preset:
+  params, default modulations, and seed values presented as selectable visual
+  thumbnails; selecting one stamps concrete values onto a Visual Clip rather
+  than creating a live dependency on the Look definition. A Visual Clip may
+  remember the last selected Look as non-authoritative provenance.
+- **Look thumbnail** — a deterministic gallery render of a Look using the real
+  renderer at fixed sample time and synthetic audio features, so Looks can be
+  compared independently of the current song.
 - **Transport** — the playback clock (`src/audio/playback.ts`), driven by the
   Web Audio context. The preview render loop follows `transport.getTime()`;
   visuals never follow requestAnimationFrame timing.

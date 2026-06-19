@@ -1,14 +1,32 @@
 import type { AudioAnalysis } from "@/audio/analysisTypes";
 import { createFeatureSampler } from "@/audio/features";
-import type { Project } from "@/model/types";
-import { ASPECT_RATIOS } from "@/model/types";
+import type { FeatureSampler } from "@/model/evaluate";
+import type { ModulationSource, Project } from "@/model/types";
+import { ASPECT_RATIOS, SCHEMA_VERSION } from "@/model/types";
 import { RenderEngine } from "@/renderer/engine";
+import type { LookDescriptor } from "@/renderer/presets";
 import { listImageBitmaps } from "@/state/mediaCache";
 import { saveThumbnail } from "@/storage/db";
 
 const THUMBNAIL_WIDTH = 480;
+const LOOK_THUMBNAIL_SIZE = 192;
+const LOOK_THUMBNAIL_TIME = 2.4;
 /** Short fixed-step run-up so trails look representative in the still. */
 const WARMUP_FRAMES = 8;
+
+const LOOK_FEATURES: Record<ModulationSource, number> = {
+  rms: 0.58,
+  bass: 0.72,
+  mid: 0.45,
+  high: 0.38,
+  beat: 0.82,
+  onset: 0.64,
+};
+
+const syntheticLookFeatures: FeatureSampler = (source, time) => {
+  const pulse = 0.5 + 0.5 * Math.sin(time * 2.1);
+  return Math.min(1, LOOK_FEATURES[source] * (0.78 + pulse * 0.22));
+};
 
 /**
  * Renders the project thumbnail: a deterministic frame at 25% of the
@@ -53,5 +71,71 @@ export async function generateAndStoreThumbnail(
   const blob = await renderProjectThumbnail(project, analysis);
   if (blob) {
     await saveThumbnail(project.id, blob);
+  }
+}
+
+function projectForLook(look: LookDescriptor): Project {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    id: `look-thumbnail-${look.id}`,
+    name: look.label,
+    songName: "",
+    createdAt: 0,
+    modifiedAt: 0,
+    duration: 4,
+    fps: 30,
+    aspectRatio: "1:1",
+    tracks: [
+      {
+        id: "visual",
+        type: "visual",
+        name: "Visual",
+        muted: false,
+        opacity: 1,
+        blendMode: "normal",
+        clips: [
+          {
+            id: "look",
+            type: "visual",
+            presetId: look.presetId,
+            lookId: look.id,
+            start: 0,
+            duration: 4,
+            seed: look.seed,
+            params: { ...look.params },
+            keyframes: {},
+            modulations: look.defaultModulations.map((modulation, index) => ({
+              id: `mod-${index}`,
+              ...modulation,
+            })),
+          },
+        ],
+      },
+    ],
+    assets: [],
+    beatGrid: null,
+    primaryAudioAssetId: null,
+  };
+}
+
+export async function renderLookThumbnail(look: LookDescriptor): Promise<Blob | null> {
+  const canvas = new OffscreenCanvas(LOOK_THUMBNAIL_SIZE, LOOK_THUMBNAIL_SIZE);
+  let engine: RenderEngine | null = null;
+  try {
+    engine = new RenderEngine(canvas, LOOK_THUMBNAIL_SIZE, LOOK_THUMBNAIL_SIZE);
+    const project = projectForLook(look);
+    const step = 1 / project.fps;
+    for (let k = WARMUP_FRAMES; k >= 0; k--) {
+      engine.renderFrame({
+        project,
+        time: Math.max(0, LOOK_THUMBNAIL_TIME - k * step),
+        features: syntheticLookFeatures,
+      });
+    }
+    return await canvas.convertToBlob({ type: "image/png" });
+  } catch {
+    return null;
+  } finally {
+    engine?.dispose();
   }
 }

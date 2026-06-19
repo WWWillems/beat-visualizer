@@ -2,7 +2,6 @@ import { analyzeInWorker, AudioImportError, decodeAudioFile } from "@/audio/impo
 import { transport } from "@/audio/playback";
 import { createId, createVisualClip } from "@/model/defaults";
 import type { AudioClip, ImageClip, Project } from "@/model/types";
-import { defaultParams } from "@/renderer/presets";
 import { useEditorStore } from "@/state/editorStore";
 import { putBlob, putImageBitmap } from "@/state/mediaCache";
 import { useProjectStore } from "@/state/projectStore";
@@ -137,12 +136,12 @@ export async function importMediaFile(file: File): Promise<void> {
   }
 }
 
-/** Adds a particle-field clip to the first visual track at the given time. */
+/** Adds a default Look clip to the first visual track at the given time. */
 export function addVisualClipAt(start: number, duration: number): void {
   const store = useProjectStore.getState();
   const track = firstTrackOfType(store.project, "visual");
   if (!track) return;
-  const clip = createVisualClip(start, duration, defaultParams("particleField"));
+  const clip = createVisualClip(start, duration);
   store.addClip(track.id, clip);
   useEditorStore.getState().selectClip(track.id, clip.id);
 }

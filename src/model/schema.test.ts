@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyProject } from "@/model/defaults";
+import { createEmptyProject, createVisualClip } from "@/model/defaults";
 import { migrateProject, UnsupportedSchemaError } from "@/model/schema";
 import { SCHEMA_VERSION } from "@/model/types";
 
@@ -40,5 +40,27 @@ describe("migrateProject", () => {
     const migrated = migrateProject(legacy);
 
     expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it("migrates version 3 projects after adding optional look provenance", () => {
+    const legacy = createEmptyProject("Legacy");
+    legacy.schemaVersion = 3;
+    const visualTrack = legacy.tracks.find((track) => track.type === "visual");
+    if (visualTrack?.type === "visual") {
+      visualTrack.clips.push(createVisualClip(0, 4));
+    }
+    const clip = visualTrack?.clips[0];
+    if (clip?.type === "visual") {
+      delete clip.lookId;
+    }
+
+    const migrated = migrateProject(legacy);
+
+    expect(migrated.schemaVersion).toBe(SCHEMA_VERSION);
+    const migratedVisualTrack = migrated.tracks.find((track) => track.type === "visual");
+    const migratedClip = migratedVisualTrack?.clips[0];
+    if (migratedClip?.type === "visual") {
+      expect(migratedClip.lookId).toBeUndefined();
+    }
   });
 });

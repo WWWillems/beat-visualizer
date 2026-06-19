@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +20,13 @@ import type {
   Track,
   VisualClip,
 } from "@/model/types";
-import { modulatableParams, PRESETS } from "@/renderer/presets";
+import { looksForPreset, modulatableParams, PRESETS, type LookDescriptor } from "@/renderer/presets";
+import { renderLookThumbnail } from "@/renderer/thumbnail";
 import { useEditorStore } from "@/state/editorStore";
 import { useProjectStore } from "@/state/projectStore";
 
 const MODULATION_SOURCES: ModulationSource[] = ["rms", "bass", "mid", "high", "beat", "onset"];
+const lookThumbnailCache = new Map<string, string>();
 
 function findSelected(project: Project, trackId: string | null, clipId: string | null) {
   const track = project.tracks.find((t) => t.id === trackId);
@@ -74,6 +77,103 @@ function BeatGridSection() {
   );
 }
 
+function useLookThumbnail(look: LookDescriptor): string | null {
+  const [src, setSrc] = useState<string | null>(() => lookThumbnailCache.get(look.id) ?? null);
+
+  useEffect(() => {
+    const cached = lookThumbnailCache.get(look.id);
+    if (cached) {
+      setSrc(cached);
+      return;
+    }
+
+    let cancelled = false;
+    void renderLookThumbnail(look).then((blob) => {
+      if (cancelled || !blob) return;
+      const url = URL.createObjectURL(blob);
+      lookThumbnailCache.set(look.id, url);
+      setSrc(url);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [look]);
+
+  return src;
+}
+
+function LookCard({
+  look,
+  selected,
+  onSelect,
+}: {
+  look: LookDescriptor;
+  selected: boolean;
+  onSelect: (look: LookDescriptor) => void;
+}) {
+  const thumbnail = useLookThumbnail(look);
+
+  return (
+    <button
+      type="button"
+      className={[
+        "group overflow-hidden rounded-sm border bg-card text-left transition-colors hover:bg-accent",
+        selected ? "border-foreground" : "border-border",
+      ].join(" ")}
+      onClick={() => onSelect(look)}
+    >
+      <div className="aspect-square bg-black">
+        {thumbnail ? (
+          <img src={thumbnail} alt="" className="size-full object-cover" />
+        ) : (
+          <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+            Rendering
+          </div>
+        )}
+      </div>
+      <div className="space-y-0.5 p-1.5">
+        <div className="truncate text-[10px] font-medium">{look.label}</div>
+        <div className="truncate text-[9px] text-muted-foreground">{PRESETS[look.presetId].label}</div>
+      </div>
+    </button>
+  );
+}
+
+function LookChooser({
+  selectedLookId,
+  onSelect,
+}: {
+  selectedLookId?: string;
+  onSelect: (look: LookDescriptor) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="space-y-0.5">
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground">Looks</h3>
+        <p className="text-[10px] text-muted-foreground">
+          Selecting a Look replaces this clip&apos;s visual settings.
+        </p>
+      </div>
+      {Object.values(PRESETS).map((preset) => (
+        <div key={preset.id} className="space-y-1.5">
+          <div className="text-[10px] font-medium uppercase tracking-wider">{preset.label}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {looksForPreset(preset.id).map((look) => (
+              <LookCard
+                key={look.id}
+                look={look}
+                selected={selectedLookId === look.id}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function VisualClipSection({ track, clip }: { track: Track; clip: VisualClip }) {
   const updateProject = useProjectStore((s) => s.updateProject);
   const preset = PRESETS[clip.presetId];
@@ -88,8 +188,24 @@ function VisualClipSection({ track, clip }: { track: Track; clip: VisualClip }) 
     });
   };
 
+  const applyLook = (look: LookDescriptor) => {
+    updateClip((draft) => {
+      draft.presetId = look.presetId;
+      draft.lookId = look.id;
+      draft.seed = look.seed;
+      draft.params = { ...look.params };
+      draft.keyframes = {};
+      draft.modulations = look.defaultModulations.map((modulation) => ({
+        id: createId(),
+        ...modulation,
+      }));
+    });
+  };
+
   return (
     <div className="space-y-4">
+      <LookChooser selectedLookId={clip.lookId} onSelect={applyLook} />
+      <Separator />
       <h3 className="text-xs uppercase tracking-wider text-muted-foreground">{preset.label}</h3>
       {preset.params.map((param) => (
         <div key={param.key} className="space-y-1.5">

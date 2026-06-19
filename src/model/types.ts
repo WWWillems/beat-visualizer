@@ -4,7 +4,7 @@
  * versions. Binary media lives in separate asset records keyed by assetId.
  */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export type AspectRatioId = "16:9" | "9:16" | "1:1" | "4:5";
 
@@ -78,11 +78,13 @@ export interface AudioClip extends ClipBase {
   gain: number;
 }
 
-export type VisualPresetId = "particleField";
+export type VisualPresetId = "particleField" | "flowField" | "radialBurst";
 
 export interface VisualClip extends ClipBase {
   type: "visual";
   presetId: VisualPresetId;
+  /** Non-authoritative provenance for the last Look stamped onto this clip. */
+  lookId?: string;
   /** Seed for deterministic preview/export parity. */
   seed: number;
   /** Base values for preset parameters, keyed by param key. */

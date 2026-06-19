@@ -6,7 +6,7 @@ import {
   type VisualClip,
   type VisualTrack,
 } from "@/model/types";
-import { defaultModulationTemplates } from "@/renderer/presets";
+import { defaultLook, lookDescriptor, type LookDescriptor } from "@/renderer/presets";
 
 export function createId(): string {
   return crypto.randomUUID();
@@ -66,20 +66,31 @@ export function createImageTrack(name: string): ImageTrack {
 export function createVisualClip(
   start: number,
   duration: number,
-  params: Record<string, number>,
+  look: LookDescriptor = defaultLook(),
 ): VisualClip {
   return {
     id: createId(),
     type: "visual",
-    presetId: "particleField",
+    presetId: look.presetId,
+    lookId: look.id,
     start,
     duration,
-    seed: Math.floor(Math.random() * 2 ** 31),
-    params,
+    seed: look.seed,
+    params: { ...look.params },
     keyframes: {},
-    modulations: defaultModulationTemplates("particleField").map((modulation) => ({
+    modulations: look.defaultModulations.map((modulation) => ({
       id: createId(),
       ...modulation,
     })),
   };
+}
+
+export function createVisualClipFromLook(
+  start: number,
+  duration: number,
+  lookId: string,
+): VisualClip {
+  const look = lookDescriptor(lookId);
+  if (!look) throw new Error(`Unknown Look: ${lookId}`);
+  return createVisualClip(start, duration, look);
 }
