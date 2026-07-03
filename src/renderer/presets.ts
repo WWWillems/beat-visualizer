@@ -686,7 +686,7 @@ export const LOOKS: LookDescriptor[] = [
     presetId: "strokes",
     label: "Brush Swirl",
     seed: 63019,
-    params: { count: 1800, length: 0.55, curl: 2.2, speed: 0.45, spread: 0.42, wobble: 0.32, brightness: 0.82, reactivity: 0.82, trail: 0.74 },
+    params: { count: 900, length: 0.6, curl: 2.4, speed: 0.45, spread: 0.85, wobble: 0.32, brightness: 0.78, reactivity: 0.82, trail: 0.74 },
     defaultModulations: PRESETS.strokes.defaultModulations,
   },
   {
@@ -694,7 +694,7 @@ export const LOOKS: LookDescriptor[] = [
     presetId: "strokes",
     label: "Ink Fibers",
     seed: 63132,
-    params: { count: 2600, length: 1.05, curl: 0.5, speed: 0.6, spread: 0.28, wobble: 0.5, brightness: 0.78, reactivity: 0.84, trail: 0.66 },
+    params: { count: 1600, length: 1.05, curl: 0.5, speed: 0.6, spread: 0.55, wobble: 0.5, brightness: 0.72, reactivity: 0.84, trail: 0.66 },
     defaultModulations: [
       { param: "length", source: "onset", amount: 0.26, smoothing: 0.07 },
       { param: "wobble", source: "high", amount: 0.22, smoothing: 0.18 },
@@ -706,7 +706,7 @@ export const LOOKS: LookDescriptor[] = [
     presetId: "grainField",
     label: "Static Square",
     seed: 74015,
-    params: { shape: 0, size: 0.46, edge: 0.028, grain: 0.55, density: 1.6, brightness: 0.88, reactivity: 0.85 },
+    params: { shape: 0, size: 0.24, edge: 0.028, grain: 0.55, density: 1.6, brightness: 0.88, reactivity: 0.85 },
     defaultModulations: PRESETS.grainField.defaultModulations,
   },
   {
@@ -714,7 +714,7 @@ export const LOOKS: LookDescriptor[] = [
     presetId: "grainField",
     label: "Noise Ring",
     seed: 74128,
-    params: { shape: 1, size: 0.4, edge: 0.02, grain: 0.48, density: 2.0, brightness: 0.86, reactivity: 0.82 },
+    params: { shape: 1, size: 0.3, edge: 0.02, grain: 0.48, density: 2.0, brightness: 0.86, reactivity: 0.82 },
     defaultModulations: PRESETS.grainField.defaultModulations,
   },
   {
@@ -722,7 +722,7 @@ export const LOOKS: LookDescriptor[] = [
     presetId: "nebula",
     label: "Cell Cluster",
     seed: 85011,
-    params: { scale: 4.2, cells: 0.82, drift: 0.45, contrast: 1.8, falloff: 0.6, brightness: 0.86, reactivity: 0.82 },
+    params: { scale: 4.2, cells: 0.82, drift: 0.45, contrast: 2.3, falloff: 0.9, brightness: 0.86, reactivity: 0.82 },
     defaultModulations: PRESETS.nebula.defaultModulations,
   },
   {
@@ -730,7 +730,7 @@ export const LOOKS: LookDescriptor[] = [
     presetId: "nebula",
     label: "Plasma Cloud",
     seed: 85124,
-    params: { scale: 2.6, cells: 0.2, drift: 0.35, contrast: 2.6, falloff: 0.45, brightness: 0.84, reactivity: 0.8 },
+    params: { scale: 2.6, cells: 0.2, drift: 0.35, contrast: 1.5, falloff: 0.45, brightness: 0.95, reactivity: 0.8 },
     defaultModulations: [
       { param: "drift", source: "rms", amount: 0.2, smoothing: 0.3 },
       { param: "contrast", source: "mid", amount: 0.4, smoothing: 0.32 },

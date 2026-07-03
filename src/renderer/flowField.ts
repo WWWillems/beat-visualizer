@@ -228,7 +228,7 @@ export class FlowFieldInstance {
     const trail = resolveParam(clip, "trail", timelineTime, features);
     const decay = trail <= 0 ? 0 : Math.exp(Math.log(trail) * dt * 30);
     const trailNorm = Math.min(1, Math.max(0.08, (1 - decay) * 2.0));
-    const countNorm = Math.min(1, 2200 / Math.max(1, count));
+    const countNorm = Math.min(1, Math.sqrt(2200 / Math.max(1, count)));
     this.material.uniforms.uEnergy.value = trailNorm * countNorm * 5;
 
     this.decayMaterial.uniforms.uPrev.value = this.targetB.texture;

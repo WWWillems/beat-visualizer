@@ -12,14 +12,21 @@ export interface PostFxConfig {
   bloomStrength: number;
   bloomThreshold: number;
   grain: number;
-  contrast: number;
+  /** Exposure for the filmic shoulder; higher = brighter hot cores. */
+  exposure: number;
+  /** Output gamma > 1 crushes blacks for a subject-on-black read. */
+  gamma: number;
+  /** 0..1 edge darkening. */
+  vignette: number;
 }
 
 export const DEFAULT_POST_FX: PostFxConfig = {
-  bloomStrength: 0.55,
-  bloomThreshold: 0.6,
-  grain: 0.05,
-  contrast: 1.12,
+  bloomStrength: 0.9,
+  bloomThreshold: 0.3,
+  grain: 0.06,
+  exposure: 1.7,
+  gamma: 1.35,
+  vignette: 0.32,
 };
 
 const BRIGHT_FRAGMENT = /* glsl */ `
@@ -54,7 +61,9 @@ const COMPOSITE_FRAGMENT = /* glsl */ `
 uniform sampler2D uScene;
 uniform sampler2D uBloom;
 uniform float uBloomStrength;
-uniform float uContrast;
+uniform float uExposure;
+uniform float uGamma;
+uniform float uVignette;
 uniform float uGrain;
 uniform float uTime;
 varying vec2 vUv;
@@ -76,7 +85,15 @@ void main() {
   vec3 scene = texture2D(uScene, vUv).rgb;
   vec3 bloom = texture2D(uBloom, vUv).rgb;
   vec3 col = scene + bloom * uBloomStrength;
-  col = max((col - 0.5) * uContrast + 0.5, 0.0);
+
+  // Filmic shoulder: bright cores roll toward white instead of hard-clipping,
+  // then a >1 gamma crushes the low end so subjects sit on true black.
+  col = 1.0 - exp(-col * uExposure);
+  col = pow(clamp(col, 0.0, 1.0), vec3(uGamma));
+
+  float r = length(vUv - 0.5) * 1.41421356;
+  col *= 1.0 - smoothstep(0.55, 1.05, r) * uVignette;
+
   vec3 srgb = linearToSRGB(col);
   float g = hash(gl_FragCoord.xy + vec2(uTime * 61.0, uTime * 37.0)) - 0.5;
   srgb = clamp(srgb + g * uGrain, 0.0, 1.0);
@@ -156,7 +173,9 @@ export class PostFx {
         uScene: { value: this.sceneTarget.texture },
         uBloom: { value: this.bloomA.texture },
         uBloomStrength: { value: config.bloomStrength },
-        uContrast: { value: config.contrast },
+        uExposure: { value: config.exposure },
+        uGamma: { value: config.gamma },
+        uVignette: { value: config.vignette },
         uGrain: { value: config.grain },
         uTime: { value: 0 },
       },
@@ -171,7 +190,9 @@ export class PostFx {
   setConfig(config: PostFxConfig): void {
     this.brightMaterial.uniforms.uThreshold.value = config.bloomThreshold;
     this.compositeMaterial.uniforms.uBloomStrength.value = config.bloomStrength;
-    this.compositeMaterial.uniforms.uContrast.value = config.contrast;
+    this.compositeMaterial.uniforms.uExposure.value = config.exposure;
+    this.compositeMaterial.uniforms.uGamma.value = config.gamma;
+    this.compositeMaterial.uniforms.uVignette.value = config.vignette;
     this.compositeMaterial.uniforms.uGrain.value = config.grain;
   }
 
@@ -198,13 +219,16 @@ export class PostFx {
   render(renderer: THREE.WebGLRenderer, time: number): void {
     this.pass(renderer, this.brightMaterial, this.bloomA);
 
-    this.blurMaterial.uniforms.uTex.value = this.bloomA.texture;
-    (this.blurMaterial.uniforms.uDir.value as THREE.Vector2).set(1, 0);
-    this.pass(renderer, this.blurMaterial, this.bloomB);
+    // Two separable blur iterations give the bloom a wide, soft halo.
+    for (let i = 0; i < 2; i++) {
+      this.blurMaterial.uniforms.uTex.value = this.bloomA.texture;
+      (this.blurMaterial.uniforms.uDir.value as THREE.Vector2).set(1 + i, 0);
+      this.pass(renderer, this.blurMaterial, this.bloomB);
 
-    this.blurMaterial.uniforms.uTex.value = this.bloomB.texture;
-    (this.blurMaterial.uniforms.uDir.value as THREE.Vector2).set(0, 1);
-    this.pass(renderer, this.blurMaterial, this.bloomA);
+      this.blurMaterial.uniforms.uTex.value = this.bloomB.texture;
+      (this.blurMaterial.uniforms.uDir.value as THREE.Vector2).set(0, 1 + i);
+      this.pass(renderer, this.blurMaterial, this.bloomA);
+    }
 
     this.compositeMaterial.uniforms.uTime.value = time;
     this.pass(renderer, this.compositeMaterial, null);

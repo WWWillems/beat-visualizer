@@ -36,11 +36,14 @@ void main() {
   vec3 pos = vec3(base.x * cs - base.y * sn, base.x * sn + base.y * cs, base.z);
 
   float h = hash13(base + 3.17);
-  pos += normalize(pos + 1e-5) * sin(uTime * 1.3 + h * 6.28318530718) * uDisplace * (0.5 + uBass);
+  pos += normalize(pos + 1e-5) * sin(uTime * 1.3 + h * 6.28318530718) * uDisplace * (0.5 + uBass) * 0.4;
 
   float spin = uTime * uSpin;
   pos.xz = mat2(cos(spin), -sin(spin), sin(spin), cos(spin)) * pos.xz;
-  pos.z *= 1.0 + uDepth * 1.1;
+  // Keep the structure well inside the camera's near plane: scale to a
+  // subject-sized cube and only mildly stretch depth.
+  pos *= 0.62;
+  pos.z *= 1.0 + uDepth * 0.35;
 
   vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
   gl_Position = projectionMatrix * mvPosition;
@@ -238,7 +241,11 @@ export class LatticeInstance {
 
     const trail = resolveParam(clip, "trail", timelineTime, features);
     const decay = trail <= 0 ? 0 : Math.exp(Math.log(trail) * dt * 30);
-    this.material.uniforms.uEnergy.value = Math.min(1, Math.max(0.18, (1 - decay) * 2.2)) * 2.4;
+    // Wireframes read as crisp lines, not glow fields: keep per-line alpha
+    // low and scale down with node density so dense cages don't clip white.
+    const trailNorm = Math.min(1, Math.max(0.2, (1 - decay) * 1.5));
+    const cellNorm = 5 / Math.max(2, cells);
+    this.material.uniforms.uEnergy.value = trailNorm * cellNorm * 0.85;
 
     this.decayMaterial.uniforms.uPrev.value = this.targetB.texture;
     this.decayMaterial.uniforms.uDecay.value = decay;

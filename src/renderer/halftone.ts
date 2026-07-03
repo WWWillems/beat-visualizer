@@ -3,12 +3,19 @@ import type { VisualClip } from "@/model/types";
 import { FullscreenPreset, NOISE_GLSL } from "@/renderer/fullscreenPreset";
 import { clamp01, particleFamilyGates } from "@/renderer/renderDynamics";
 
+function smoothstep01(edge0: number, edge1: number, x: number): number {
+  const t = clamp01((x - edge0) / (edge1 - edge0));
+  return t * t * (3 - 2 * t);
+}
+
 /**
- * Per-dot radius (in cell-fraction units) from a field amplitude. Pure so it
- * can be unit-tested; the shader mirrors this expression.
+ * Per-dot radius (in cell-fraction units) from a field amplitude. Quiet cells
+ * gate to zero so the grid shows clusters on black rather than a uniform wall
+ * of grey dots. Pure so it can be unit-tested; the shader mirrors this.
  */
 export function halftoneDotRadius(amp: number, dotScale: number, bass: number): number {
-  return dotScale * (0.15 + clamp01(amp) * 0.85) * (0.8 + clamp01(bass) * 0.4);
+  const gated = smoothstep01(0.3, 0.95, clamp01(amp));
+  return dotScale * gated * (0.85 + clamp01(bass) * 0.4);
 }
 
 const FRAGMENT_SHADER = /* glsl */ `
@@ -38,10 +45,14 @@ void main() {
   float spec = texture2D(uSpectrum, vec2(cellUv.x, 0.5)).r;
   float amp = mix(n, spec, uSpectrumMix);
 
-  float radius = uDotScale * (0.15 + clamp(amp, 0.0, 1.0) * 0.85) * (0.8 + uBass * 0.4);
+  // Gate quiet cells to zero so the grid shows clusters on black instead of
+  // a uniform wall of grey dots.
+  amp = smoothstep(0.3, 0.95, clamp(amp, 0.0, 1.0));
+
+  float radius = uDotScale * amp * (0.85 + uBass * 0.4);
   float d = length(f);
-  float dot = smoothstep(radius, radius * 0.55, d);
-  float lum = dot * pow(clamp(amp, 0.0, 1.0), uContrast) * uBright;
+  float dot = smoothstep(radius, radius * 0.55, d) * step(0.01, radius);
+  float lum = dot * (pow(amp, uContrast) + pow(amp, uContrast * 3.0) * 0.8) * uBright;
   gl_FragColor = vec4(vec3(lum), 1.0);
 }
 `;

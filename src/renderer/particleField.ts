@@ -266,7 +266,9 @@ export class ParticleFieldInstance {
     // instead of clipping to flat white: longer trails accumulate to
     // alpha/(1-decay), and more particles overlap more per pixel.
     const trailNorm = Math.min(1, Math.max(0.08, (1 - decay) * 2.0));
-    const countNorm = Math.min(1, 2000 / Math.max(1, count));
+    // sqrt: perceived additive coverage grows with the square root of count,
+    // so linear normalization over-dims dense fields into faint dust.
+    const countNorm = Math.min(1, Math.sqrt(2000 / Math.max(1, count)));
     this.material.uniforms.uEnergy.value = trailNorm * countNorm * 5;
 
     // 1. Decay previous accumulation from B into A.

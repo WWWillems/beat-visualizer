@@ -20,22 +20,33 @@ ${NOISE_GLSL}
 
 void main() {
   float aspect = uResolution.x / max(1.0, uResolution.y);
-  vec2 p = (vUv - 0.5) * vec2(aspect, 1.0);
+  // Subject sits slightly right of center, like the reference plate.
+  vec2 p = (vUv - 0.5) * vec2(aspect, 1.0) - vec2(0.12, 0.0);
 
   vec2 q = abs(p) - vec2(uSize);
   float dSquare = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
   float dRing = length(p) - uSize;
   float dist = mix(dSquare, dRing, step(0.5, uShape));
   float outline = 1.0 - smoothstep(0.0, uEdge, abs(dist));
+  // A second, softer echo line just outside the primitive.
+  float echo = (1.0 - smoothstep(0.0, uEdge * 6.0, abs(dist - uEdge * 8.0))) * 0.2;
 
   // Animated film grain, stepped to ~24 distinct frames/sec so it is a pure
   // function of time (deterministic preview/export).
   vec2 cell = floor(vUv * uResolution / max(1.0, uDensity));
   float seed = floor(uTime * 24.0);
   float gr = hash21(cell + vec2(seed, seed * 1.7));
-  float grain = gr * uGrain * (0.7 + uBass * 0.6);
 
-  float lum = clamp(outline * uBright + grain, 0.0, 1.0);
+  // Grain is a fog hugging the primitive: dense near the shape, decaying to
+  // black at the edges, with a drifting fbm cloud breaking up uniformity.
+  // Gated by (1 - outline) so the fog never sits on the wire itself.
+  float halo = exp(-max(0.0, abs(dist)) * 5.5);
+  float cloudMask = fbm(p * 2.4 + vec2(uTime * 0.05, 0.0));
+  float fog = halo * (0.35 + cloudMask * 0.85) * (1.0 - outline);
+  float grain = pow(gr, 1.8) * uGrain * fog * (0.8 + uBass * 0.7);
+
+  // The outline overshoots 1.0 so bloom gives it a hot-wire glow.
+  float lum = outline * uBright * 2.4 + echo * uBright + grain;
   gl_FragColor = vec4(vec3(lum), 1.0);
 }
 `;

@@ -20,7 +20,8 @@ ${NOISE_GLSL}
 
 void main() {
   float aspect = uResolution.x / max(1.0, uResolution.y);
-  vec2 p = (vUv - 0.5) * vec2(aspect, 1.0) * uScale;
+  vec2 uvc = (vUv - 0.5) * vec2(aspect, 1.0);
+  vec2 p = uvc * uScale;
   float t = uTime * uFlow;
 
   // Iterated domain warp turns smooth fbm into flowing ink / smoke.
@@ -31,15 +32,29 @@ void main() {
   );
   float v = fbm(p + uWarp * r + t * 0.1);
 
+  // Ridged filaments: fold the field so mid-grey turns into bright veins
+  // over dark gaps instead of uniform mush.
+  float ridge = 1.0 - abs(v * 2.0 - 1.0);
+  ridge = ridge * ridge;
+  float field = mix(v, ridge, 0.72);
+
   // Optional horizontal stratification for the liquid-band look.
   float bands = 0.5 + 0.5 * sin((vUv.y * 6.0 + v * 3.0 + t * 0.2) * 6.28318530718);
-  float field = mix(v, v * 0.5 + bands * 0.5, uBands);
+  field = mix(field, field * 0.42 + bands * ridge * 0.75, uBands);
 
   float spec = texture2D(uSpectrum, vec2(vUv.x, 0.5)).r;
-  field += spec * 0.12 * (0.5 + uBass);
+  field += spec * 0.1 * (0.5 + uBass);
 
-  float lum = pow(clamp(field, 0.0, 1.0), uContrast);
-  lum *= uBright * (0.8 + uBass * 0.5);
+  // Subject-on-black: the warp field also displaces the mask so the blob
+  // silhouette is organic, not a centered circle. With bands up, the mask
+  // relaxes into a horizontal strip so the liquid reads as a wave band.
+  vec2 maskP = uvc * vec2(mix(1.0, 0.4, uBands), mix(1.0, 1.5, uBands));
+  float mask = 1.0 - smoothstep(0.18, 0.62, length(maskP + (q - 0.5) * 0.35));
+
+  float lum = pow(clamp(field, 0.0, 1.0), uContrast) * mask;
+  // Push the brightest cores past 1.0 so the bloom pass catches them.
+  lum += pow(clamp(field, 0.0, 1.0), uContrast * 2.4) * mask * 0.9;
+  lum *= uBright * (0.75 + uBass * 0.55);
   gl_FragColor = vec4(vec3(lum), 1.0);
 }
 `;

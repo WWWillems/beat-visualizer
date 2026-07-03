@@ -228,9 +228,11 @@ export class StrokesInstance {
 
     const trail = resolveParam(clip, "trail", timelineTime, features);
     const decay = trail <= 0 ? 0 : Math.exp(Math.log(trail) * dt * 30);
+    // Every stroke rasterizes ~24 overlapping segments, so per-line alpha
+    // must stay far below 1 or the swirl clips to a white blob.
     const trailNorm = Math.min(1, Math.max(0.1, (1 - decay) * 2.0));
-    const countNorm = Math.min(1, 1200 / Math.max(1, count));
-    this.material.uniforms.uEnergy.value = trailNorm * countNorm * 4.5;
+    const countNorm = Math.min(1, 600 / Math.max(1, count));
+    this.material.uniforms.uEnergy.value = trailNorm * countNorm * 0.35;
 
     this.decayMaterial.uniforms.uPrev.value = this.targetB.texture;
     this.decayMaterial.uniforms.uDecay.value = decay;
